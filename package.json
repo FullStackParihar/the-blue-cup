@@ -1,0 +1,30 @@
+{
+  "name": "the-blue-cup",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Blue Cup Cafe - Real-Time Ordering System",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "dev:client": "turbo run dev --filter=@the-blue-cup/client",
+    "dev:server": "turbo run dev --filter=@the-blue-cup/server",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "prettier": "^3.5.0",
+    "eslint": "^9.20.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "npm@10.8.2",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

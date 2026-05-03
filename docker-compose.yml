@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: bluecup-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=the-blue-cup
+    networks:
+      - bluecup-network
+
+  server:
+    build:
+      context: .
+      target: server
+    container_name: bluecup-server
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/the-blue-cup
+      - JWT_SECRET=blue-cup-super-secret-docker
+      - CLIENT_URL=http://localhost
+    depends_on:
+      - mongodb
+    networks:
+      - bluecup-network
+
+  client:
+    build:
+      context: .
+      target: client
+    container_name: bluecup-client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - bluecup-network
+
+networks:
+  bluecup-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

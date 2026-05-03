@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* ==========================================
+   The Blue Cup Cafe — Design Tokens
+   ========================================== */
+
+@theme {
+  --color-primary-navy: #003171;
+  --color-antique-cream: #FCFAF5;
+  --color-accent-gold: #C9A84C;
+  --color-alert-red: #E63946;
+  --color-navy-light: #004499;
+  --color-navy-dark: #002255;
+  --color-cream-dark: #F2EDE4;
+  --color-gold-light: #E0C56A;
+  --color-gold-dark: #A88B2F;
+  --color-leaf: #8B9E6B;
+  --color-leaf-light: #B5C49A;
+  --color-sage: #A3B18A;
+  --color-warm-white: #FFFDF7;
+  --color-border: #E8E0D0;
+  --color-muted: #8C8575;
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Inter", sans-serif;
+
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.03);
+  --shadow-premium: 0 10px 40px -10px rgba(0, 49, 113, 0.1);
+  --shadow-gold: 0 10px 20px -5px rgba(201, 168, 76, 0.2);
+  --shadow-glow: 0 0 30px rgba(201, 168, 76, 0.15);
+}
+
+/* ==========================================
+   Base Styles
+   ========================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-antique-cream);
+  color: var(--color-primary-navy);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Custom Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-antique-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-gold);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.1;
+}
+
+/* ==========================================
+   Standard Components
+   ========================================== */
+
+.btn-primary {
+  @apply px-6 py-4 bg-primary-navy text-antique-cream rounded-2xl font-body font-black uppercase tracking-widest text-[10px]
+         shadow-soft hover:shadow-premium transition-all active:scale-95 flex items-center justify-center gap-2 border border-primary-navy;
+}
+
+.btn-secondary {
+  @apply px-8 py-4 bg-white border-2 border-primary-navy text-primary-navy rounded-2xl font-body font-black uppercase tracking-widest hover:bg-antique-cream transition-all active:scale-95 shadow-soft;
+}
+
+.btn-gold {
+  @apply px-6 py-4 bg-accent-gold text-primary-navy rounded-2xl font-body font-black uppercase tracking-widest text-[10px]
+         shadow-gold hover:brightness-105 transition-all active:scale-95 flex items-center justify-center gap-2 border border-accent-gold;
+}
+
+.card-premium {
+  @apply bg-white border border-border/60 rounded-[2.5rem] shadow-soft hover:shadow-premium transition-all duration-500 relative overflow-hidden;
+}
+
+.input-premium {
+  @apply w-full px-6 py-4 bg-warm-white border border-border rounded-2xl font-body text-sm 
+         focus:outline-none focus:ring-4 focus:ring-accent-gold/10 focus:border-accent-gold transition-all;
+}
+
+.numeric-text {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0;
+  line-height: 1;
+  font-weight: 900;
+}
+
+/* ==========================================
+   Utilities & Animations
+   ========================================== */
+
+.glass-morphism {
+  background: rgba(255, 253, 247, 0.4);
+  backdrop-filter: blur(25px) saturate(150%);
+  -webkit-backdrop-filter: blur(25px) saturate(150%);
+}
+
+.text-gradient-gold {
+  @apply bg-clip-text text-transparent bg-gradient-to-br from-gold-dark via-accent-gold to-gold-light;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.hover-lift {
+  @apply transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl;
+}
+
+.bento-grid {
+  @apply grid grid-cols-1 md:grid-cols-12 gap-8;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.blur-overlay {
+  @apply absolute inset-0 pointer-events-none;
+  background: radial-gradient(circle at 50% 50%, transparent, var(--color-antique-cream));
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+}

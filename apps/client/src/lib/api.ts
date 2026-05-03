@@ -1,0 +1,112 @@
+import type { ApiResponse, MenuItem, Order, CreateOrderPayload } from "@the-blue-cup/types";
+
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+// ==========================================
+// Generic Fetch Helper
+// ==========================================
+async function apiFetch<T>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  const adminToken = localStorage.getItem("admin-token");
+  const userToken = localStorage.getItem("token"); 
+  const token = adminToken || userToken;
+  
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${url}`, {
+    headers,
+    ...options,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ==========================================
+// Menu API
+// ==========================================
+export const menuApi = {
+  getAll: () => apiFetch<MenuItem[]>("/menu"),
+
+  getByCategory: (category: string) => apiFetch<MenuItem[]>(`/menu/category/${category}`),
+
+  getById: (id: string) => apiFetch<MenuItem>(`/menu/${id}`),
+
+  create: (payload: Omit<MenuItem, "_id">) =>
+    apiFetch<MenuItem>("/menu", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  update: (id: string, payload: Partial<MenuItem>) =>
+    apiFetch<MenuItem>(`/menu/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+
+  delete: (id: string) =>
+    apiFetch<{ success: boolean }>(`/menu/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+// ==========================================
+// Order API
+// ==========================================
+export const orderApi = {
+  getAll: (status?: string, deviceId?: string, timeframe?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append("status", status);
+    if (deviceId) params.append("deviceId", deviceId);
+    if (timeframe) params.append("timeframe", timeframe);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return apiFetch<Order[]>(`/orders${query}`);
+  },
+
+  getById: (id: string) => apiFetch<Order>(`/orders/${id}`),
+
+  create: (payload: CreateOrderPayload) =>
+    apiFetch<Order>("/orders", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  updateStatus: (id: string, status: string) =>
+    apiFetch<Order>(`/orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+};
+
+// ==========================================
+// Auth API
+// ==========================================
+export const authApi = {
+  login: (payload: any) =>
+    apiFetch<any>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  register: (payload: any) =>
+    apiFetch<any>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getMe: () => apiFetch<any>("/auth/me"),
+};
+
+// ==========================================
+// Analytics API
+// ==========================================
+export const analyticsApi = {
+  get: (period: string = "weekly") => apiFetch<any>(`/analytics?period=${period}`),
+};
