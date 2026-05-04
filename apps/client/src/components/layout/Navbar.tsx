@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCartStore } from "../../stores/cartStore";
 import { useUserStore } from "../../stores/userStore";
@@ -13,6 +13,7 @@ export default function Navbar() {
   const { user, logout } = useUserStore();
 
 
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isAdmin = location.pathname.startsWith("/admin");
@@ -29,7 +30,8 @@ export default function Navbar() {
               if (now - (window as any)._lastLogoClick < 500) {
                 (window as any)._logoClicks = ((window as any)._logoClicks || 0) + 1;
                 if ((window as any)._logoClicks >= 5) {
-                  window.location.href = "/admin/login";
+                  (window as any)._logoClicks = 0; // Reset
+                  navigate("/admin/login");
                 }
               } else {
                 (window as any)._logoClicks = 1;

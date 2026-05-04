@@ -9,11 +9,21 @@ import BasketPopup from "../components/BasketPopup";
 import CheckoutSheet from "../components/CheckoutSheet";
 
 const categoryImages: Record<string, string> = {
-  Coffee: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=400&fit=crop",
   Tea: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop",
-  Pastry: "https://images.unsplash.com/photo-1555507036-ab1f4038024a?w=400&h=400&fit=crop",
+  Coffee: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=400&fit=crop",
+  "Ice Tea": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop",
+  Mocktails: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&h=400&fit=crop",
+  Shakes: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=400&fit=crop",
+  Breads: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+  Burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop",
+  "Pav & Fries": "https://images.unsplash.com/photo-1518013034993-41f89a7214f5?w=400&h=400&fit=crop",
   Sandwich: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&h=400&fit=crop",
-  Beverage: "https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=400&h=400&fit=crop",
+  Pasta: "https://images.unsplash.com/photo-1473093226795-af9932fe5856?w=400&h=400&fit=crop",
+  Pizza: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=400&fit=crop",
+  "Cafe Special": "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=400&h=400&fit=crop",
+  Momo: "https://images.unsplash.com/photo-1625220194771-7ebdea0b70b9?w=400&h=400&fit=crop",
+  Maggi: "https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400&h=400&fit=crop",
+  Rolls: "https://images.unsplash.com/photo-1626700051175-656868ed2bb1?w=400&h=400&fit=crop",
   Dessert: "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=400&fit=crop",
 };
 
@@ -88,7 +98,25 @@ export default function MenuPage() {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
 
-  const tabOrder = ["All", "Tea", "Coffee", "Shakes", "Sandwich", "Pizza", "Pasta", "Momo", "Maggi", "Dessert"];
+  const tabOrder = [
+    "All",
+    "Tea",
+    "Coffee",
+    "Ice Tea",
+    "Mocktails",
+    "Shakes",
+    "Breads",
+    "Burger",
+    "Pav & Fries",
+    "Sandwich",
+    "Pasta",
+    "Pizza",
+    "Cafe Special",
+    "Momo",
+    "Maggi",
+    "Rolls",
+    "Dessert",
+  ];
   const allCats = ["All", ...Array.from(new Set(menuItems.map((i) => i.category)))].sort((a, b) => {
     const iA = tabOrder.indexOf(a);
     const iB = tabOrder.indexOf(b);

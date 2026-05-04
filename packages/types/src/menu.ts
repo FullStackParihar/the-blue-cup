@@ -15,18 +15,42 @@ export interface MenuItem {
 }
 
 export type MenuCategory =
-  | "Coffee"
   | "Tea"
-  | "Pastry"
+  | "Coffee"
+  | "Ice Tea"
+  | "Mocktails"
+  | "Shakes"
+  | "Breads"
+  | "Burger"
+  | "Pav & Fries"
   | "Sandwich"
-  | "Beverage"
-  | "Dessert";
+  | "Pasta"
+  | "Pizza"
+  | "Cafe Special"
+  | "Momo"
+  | "Maggi"
+  | "Rolls"
+  | "Dessert"
+  | "Pastry"
+  | "Beverage";
 
 export const MENU_CATEGORIES: MenuCategory[] = [
-  "Coffee",
   "Tea",
-  "Pastry",
+  "Coffee",
+  "Ice Tea",
+  "Mocktails",
+  "Shakes",
+  "Breads",
+  "Burger",
+  "Pav & Fries",
   "Sandwich",
-  "Beverage",
+  "Pasta",
+  "Pizza",
+  "Cafe Special",
+  "Momo",
+  "Maggi",
+  "Rolls",
   "Dessert",
+  "Pastry",
+  "Beverage",
 ];
