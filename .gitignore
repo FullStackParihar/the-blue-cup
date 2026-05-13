@@ -36,6 +36,7 @@ pnpm-debug.log*
 **/.wwebjs_auth
 **/.wwebjs_cache
 **/SingletonLock
+**/.cache/puppeteer
 
 # Build & Cache
 **/dist
