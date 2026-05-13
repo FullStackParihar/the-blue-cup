@@ -36,7 +36,9 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^2.1.0",
     "@types/node": "^22.0.0",
+    "@types/qrcode-terminal": "^0.12.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.0"
   }

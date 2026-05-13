@@ -16,7 +16,7 @@ router.get("/", getAllMenuItems);
 router.get("/category/:category", getMenuItemsByCategory);
 router.get("/:id", getMenuItem);
 router.post("/", protect, adminOnly, createMenuItem);
-router.post("/upload", protect, adminOnly, upload.single("image"), (req, res) => {
+router.post("/upload", protect, adminOnly, upload.single("image"), (req: any, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
