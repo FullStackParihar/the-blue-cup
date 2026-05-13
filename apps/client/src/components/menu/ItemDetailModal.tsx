@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import type { MenuItem } from "@the-blue-cup/types";
 import { useCartStore } from "../../stores/cartStore";
+import { getImageUrl } from "../../utils/image";
 
 interface Props {
   item: MenuItem | null;
@@ -61,6 +62,7 @@ export default function ItemDetailModal({ item, onClose }: Props) {
       price: item.price + addOnTotal,
       quantity: qty,
       category: item.category,
+      image: item.image,
       customization: customization || undefined,
     });
     onClose();
@@ -70,10 +72,10 @@ export default function ItemDetailModal({ item, onClose }: Props) {
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-primary-navy/40 backdrop-blur-md" onClick={onClose}>
-        
-        <motion.div 
-          initial={{ y: "100%" }} 
-          animate={{ y: 0 }} 
+
+        <motion.div
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           onClick={(e) => e.stopPropagation()}
@@ -92,7 +94,7 @@ export default function ItemDetailModal({ item, onClose }: Props) {
 
           {/* Hero Image */}
           <div className="relative h-[250px] sm:h-[300px] w-full shrink-0 overflow-hidden">
-            <img src={categoryImages[item.category] || categoryImages.Coffee} alt={item.name}
+            <img src={getImageUrl(item.image) || categoryImages[item.category] || categoryImages.Coffee} alt={item.name}
               className="w-full h-full object-cover scale-110" />
             <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
             <div className="absolute bottom-6 left-8 flex flex-col gap-2">
@@ -108,7 +110,7 @@ export default function ItemDetailModal({ item, onClose }: Props) {
               <h2 className="font-heading text-3xl sm:text-4xl text-primary-navy font-black leading-none tracking-tight">{item.name}</h2>
               <p className="font-heading text-2xl text-accent-gold font-black whitespace-nowrap ml-6">₹{item.price.toFixed(0)}</p>
             </div>
-            
+
             <p className="font-body text-base text-muted font-medium leading-relaxed mb-10 opacity-80">{item.description}</p>
 
             {/* Customization */}
@@ -119,21 +121,19 @@ export default function ItemDetailModal({ item, onClose }: Props) {
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {addOns.map((addon) => (
-                  <button 
+                  <button
                     key={addon.name}
                     onClick={() => toggleAddOn(addon.name)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
-                      selectedAddOns.includes(addon.name)
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${selectedAddOns.includes(addon.name)
                         ? "bg-primary-navy/5 border-primary-navy/20 shadow-soft"
                         : "bg-warm-white border-border/50 hover:border-accent-gold/40"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                        selectedAddOns.includes(addon.name)
+                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedAddOns.includes(addon.name)
                           ? "bg-accent-gold border-accent-gold"
                           : "border-border bg-white"
-                      }`}>
+                        }`}>
                         {selectedAddOns.includes(addon.name) && (
                           <svg className="w-4 h-4 text-primary-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

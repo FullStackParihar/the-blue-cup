@@ -57,6 +57,21 @@ export const menuApi = {
     apiFetch<{ success: boolean }>(`/menu/${id}`, {
       method: "DELETE",
     }),
+
+  uploadImage: (formData: FormData) => {
+    const adminToken = localStorage.getItem("admin-token");
+    const userToken = localStorage.getItem("token"); 
+    const token = adminToken || userToken;
+    
+    return fetch(`${API_BASE}/menu/upload`, {
+      method: "POST",
+      headers: token ? { "Authorization": `Bearer ${token}` } : {},
+      body: formData,
+    }).then(res => {
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    });
+  }
 };
 
 // ==========================================

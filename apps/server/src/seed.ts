@@ -56,11 +56,11 @@ const menuItems = [
   { name: "Paneer Garlic Bread", description: "Diced marinated paneer and cheese on crunchy garlic bread.", price: 150, category: "Breads", isAvailable: true },
 
   // Burger
-  { name: "Aloo Tikki Burger", description: "Crispy potato patty with special herbs and classic dressing.", price: 60, category: "Burger", isAvailable: true },
-  { name: "Veg Cheese Burger", description: "Mixed veg patty with a thick slice of melting cheese.", price: 80, category: "Burger", isAvailable: true },
-  { name: "Veg Burger", description: "Classic vegetable patty burger with fresh lettuce and mayo.", price: 70, category: "Burger", isAvailable: true },
-  { name: "Paneer Veg Burger", description: "Grilled paneer steak with fresh veggies and spicy sauce.", price: 100, category: "Burger", isAvailable: true },
-  { name: "Paneer Burger With Fries", description: "Hearty paneer burger served with a side of golden fries.", price: 120, category: "Burger", isAvailable: true },
+  { name: "Aloo Tikki Burger", description: "Crispy potato patty with special herbs and classic dressing.", price: 60, category: "Burger", image: "/menu-images/burger.png", isAvailable: true },
+  { name: "Veg Cheese Burger", description: "Mixed veg patty with a thick slice of melting cheese.", price: 80, category: "Burger", image: "/menu-images/burger.png", isAvailable: true },
+  { name: "Veg Burger", description: "Classic vegetable patty burger with fresh lettuce and mayo.", price: 70, category: "Burger", image: "/menu-images/burger.png", isAvailable: true },
+  { name: "Paneer Veg Burger", description: "Grilled paneer steak with fresh veggies and spicy sauce.", price: 100, category: "Burger", image: "/menu-images/burger.png", isAvailable: true },
+  { name: "Paneer Burger With Fries", description: "Hearty paneer burger served with a side of golden fries.", price: 120, category: "Burger", image: "/menu-images/burger.png", isAvailable: true },
 
   // Pav & Fries
   { name: "Toast (2 Pc)", description: "Perfectly buttered and toasted bread slices.", price: 35, category: "Pav & Fries", isAvailable: true },
@@ -89,49 +89,49 @@ const menuItems = [
   { name: "Pink Sauce Pasta", description: "The best of both worlds - a creamy tomato rose sauce blend.", price: 150, category: "Pasta", isAvailable: true },
 
   // Pizza
-  { name: "Corn Pizza (8 inch)", description: "8\" thin crust pizza topped with sweet corn and extra cheese.", price: 120, category: "Pizza", isAvailable: true },
-  { name: "Corn Pizza (10 inch)", description: "10\" thin crust pizza topped with sweet corn and extra cheese.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Onion Pizza (8 inch)", description: "8\" pizza topped with crunchy onions and signature sauce.", price: 120, category: "Pizza", isAvailable: true },
-  { name: "Onion Pizza (10 inch)", description: "10\" pizza topped with crunchy onions and signature sauce.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Capsicum Pizza (8 inch)", description: "8\" pizza with fresh green capsicum and mozzarella.", price: 120, category: "Pizza", isAvailable: true },
-  { name: "Capsicum Pizza (10 inch)", description: "10\" pizza with fresh green capsicum and mozzarella.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Tomato Pizza (8 inch)", description: "8\" pizza topped with juicy tomatoes and Italian herbs.", price: 120, category: "Pizza", isAvailable: true },
-  { name: "Tomato Pizza (10 inch)", description: "10\" pizza topped with juicy tomatoes and Italian herbs.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Onion Paneer Pizza (8 inch)", description: "8\" pizza with marinated paneer cubes and crunchy onions.", price: 130, category: "Pizza", isAvailable: true },
-  { name: "Onion Paneer Pizza (10 inch)", description: "10\" pizza with marinated paneer cubes and crunchy onions.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Red Pepper Corn Pizza (8 inch)", description: "8\" pizza with red paprika, sweet corn, and spicy sauce.", price: 150, category: "Pizza", isAvailable: true },
-  { name: "Red Pepper Corn Pizza (10 inch)", description: "10\" pizza with red paprika, sweet corn, and spicy sauce.", price: 220, category: "Pizza", isAvailable: true },
-  { name: "OTC Pizza (8 inch)", description: "8\" pizza loaded with Onion, Tomato, and Capsicum.", price: 180, category: "Pizza", isAvailable: true },
-  { name: "OTC Pizza (10 inch)", description: "10\" pizza loaded with Onion, Tomato, and Capsicum.", price: 249, category: "Pizza", isAvailable: true },
-  { name: "Tandoori Paneer Pizza (8 inch)", description: "8\" pizza with smoky tandoori paneer and spicy drizzle.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Tandoori Paneer Pizza (10 inch)", description: "10\" pizza with smoky tandoori paneer and spicy drizzle.", price: 249, category: "Pizza", isAvailable: true },
-  { name: "Veggie Blast Pizza (8 inch)", description: "8\" pizza loaded with all garden fresh vegetables.", price: 199, category: "Pizza", isAvailable: true },
-  { name: "Veggie Blast Pizza (10 inch)", description: "10\" pizza loaded with all garden fresh vegetables.", price: 249, category: "Pizza", isAvailable: true },
-  { name: "TBC Special Pizza", description: "Our chef's signature 10\" pizza with premium toppings and extra cheese.", price: 299, category: "Pizza", isAvailable: true },
+  { name: "Corn Pizza (8 inch)", description: "8\" thin crust pizza topped with sweet corn and extra cheese.", price: 120, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Corn Pizza (10 inch)", description: "10\" thin crust pizza topped with sweet corn and extra cheese.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Onion Pizza (8 inch)", description: "8\" pizza topped with crunchy onions and signature sauce.", price: 120, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Onion Pizza (10 inch)", description: "10\" pizza topped with crunchy onions and signature sauce.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Capsicum Pizza (8 inch)", description: "8\" pizza with fresh green capsicum and mozzarella.", price: 120, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Capsicum Pizza (10 inch)", description: "10\" pizza with fresh green capsicum and mozzarella.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Tomato Pizza (8 inch)", description: "8\" pizza topped with juicy tomatoes and Italian herbs.", price: 120, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Tomato Pizza (10 inch)", description: "10\" pizza topped with juicy tomatoes and Italian herbs.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Onion Paneer Pizza (8 inch)", description: "8\" pizza with marinated paneer cubes and crunchy onions.", price: 130, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Onion Paneer Pizza (10 inch)", description: "10\" pizza with marinated paneer cubes and crunchy onions.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Red Pepper Corn Pizza (8 inch)", description: "8\" pizza with red paprika, sweet corn, and spicy sauce.", price: 150, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Red Pepper Corn Pizza (10 inch)", description: "10\" pizza with red paprika, sweet corn, and spicy sauce.", price: 220, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "OTC Pizza (8 inch)", description: "8\" pizza loaded with Onion, Tomato, and Capsicum.", price: 180, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "OTC Pizza (10 inch)", description: "10\" pizza loaded with Onion, Tomato, and Capsicum.", price: 249, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Tandoori Paneer Pizza (8 inch)", description: "8\" pizza with smoky tandoori paneer and spicy drizzle.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Tandoori Paneer Pizza (10 inch)", description: "10\" pizza with smoky tandoori paneer and spicy drizzle.", price: 249, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Veggie Blast Pizza (8 inch)", description: "8\" pizza loaded with all garden fresh vegetables.", price: 199, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "Veggie Blast Pizza (10 inch)", description: "10\" pizza loaded with all garden fresh vegetables.", price: 249, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
+  { name: "TBC Special Pizza", description: "Our chef's signature 10\" pizza with premium toppings and extra cheese.", price: 299, category: "Pizza", image: "/menu-images/pizza_pasta.png", isAvailable: true },
 
   // Cafe Special
-  { name: "Cheese Nuggets", description: "Crispy breaded nuggets filled with molten cheese.", price: 110, category: "Cafe Special", isAvailable: true },
-  { name: "Cheese Rice Cutlet", description: "Hearty rice and cheese cutlets with traditional spices.", price: 110, category: "Cafe Special", isAvailable: true },
-  { name: "Cheese Corn Cutlet", description: "Golden fried cutlets with sweet corn and melting cheese.", price: 120, category: "Cafe Special", isAvailable: true },
+  { name: "Cheese Nuggets", description: "Crispy breaded nuggets filled with molten cheese.", price: 110, category: "Cafe Special", image: "/menu-images/specials.png", isAvailable: true },
+  { name: "Cheese Rice Cutlet", description: "Hearty rice and cheese cutlets with traditional spices.", price: 110, category: "Cafe Special", image: "/menu-images/specials.png", isAvailable: true },
+  { name: "Cheese Corn Cutlet", description: "Golden fried cutlets with sweet corn and melting cheese.", price: 120, category: "Cafe Special", image: "/menu-images/specials.png", isAvailable: true },
 
   // Momo
-  { name: "Veg Momo (Steam)", description: "Healthy steamed dumplings filled with minced vegetables.", price: 80, category: "Momo", isAvailable: true },
-  { name: "Veg Momo (Fried)", description: "Crispy deep-fried dumplings with a savory veg filling.", price: 100, category: "Momo", isAvailable: true },
-  { name: "Veg Momo (Crunchy)", description: "Extra crunchy breaded momos served with spicy chutney.", price: 120, category: "Momo", isAvailable: true },
-  { name: "Veg Gravy Momo", description: "Momos tossed in a rich and spicy signature gravy.", price: 100, category: "Momo", isAvailable: true },
+  { name: "Veg Momo (Steam)", description: "Healthy steamed dumplings filled with minced vegetables.", price: 80, category: "Momo", image: "/menu-images/momo_rolls.png", isAvailable: true },
+  { name: "Veg Momo (Fried)", description: "Crispy deep-fried dumplings with a savory veg filling.", price: 100, category: "Momo", image: "/menu-images/momo_rolls.png", isAvailable: true },
+  { name: "Veg Momo (Crunchy)", description: "Extra crunchy breaded momos served with spicy chutney.", price: 120, category: "Momo", image: "/menu-images/momo_rolls.png", isAvailable: true },
+  { name: "Veg Gravy Momo", description: "Momos tossed in a rich and spicy signature gravy.", price: 100, category: "Momo", image: "/menu-images/momo_rolls.png", isAvailable: true },
 
   // Maggi
-  { name: "Plain Maggi", description: "The classic comforting bowl of masala noodles.", price: 60, category: "Maggi", isAvailable: true },
-  { name: "Veg Maggi", description: "Maggi loaded with fresh peas, carrots, and beans.", price: 89, category: "Maggi", isAvailable: true },
-  { name: "Cheese Maggi", description: "Creamy Maggi noodles topped with grated cheese.", price: 99, category: "Maggi", isAvailable: true },
-  { name: "Masala Veggie Maggi", description: "Extra spicy Maggi with a double dose of masala and veggies.", price: 99, category: "Maggi", isAvailable: true },
-  { name: "Makhani Maggi", description: "Maggi in a rich, buttery, and creamy tomato makhani sauce.", price: 99, category: "Maggi", isAvailable: true },
-  { name: "Peri Peri Masala Maggi", description: "Fiery Maggi with a zesty peri-peri spice blend.", price: 99, category: "Maggi", isAvailable: true },
-  { name: "Tandoori Maggi", description: "Maggi noodles with a smoky tandoori flavor twist.", price: 99, category: "Maggi", isAvailable: true },
+  { name: "Plain Maggi", description: "The classic comforting bowl of masala noodles.", price: 60, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
+  { name: "Veg Maggi", description: "Maggi loaded with fresh peas, carrots, and beans.", price: 89, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
+  { name: "Cheese Maggi", description: "Creamy Maggi noodles topped with grated cheese.", price: 99, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
+  { name: "Masala Veggie Maggi", description: "Extra spicy Maggi with a double dose of masala and veggies.", price: 99, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
+  { name: "Makhani Maggi", description: "Maggi in a rich, buttery, and creamy tomato makhani sauce.", price: 99, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
+  { name: "Peri Peri Masala Maggi", description: "Fiery Maggi with a zesty peri-peri spice blend.", price: 99, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
+  { name: "Tandoori Maggi", description: "Maggi noodles with a smoky tandoori flavor twist.", price: 99, category: "Maggi", image: "/menu-images/maggi.png", isAvailable: true },
 
   // Rolls
-  { name: "Veg Roll", description: "Warm tortilla rolled with spiced vegetables and sauces.", price: 69, category: "Rolls", isAvailable: true },
-  { name: "Paneer Roll", description: "Marinated paneer chunks with veggies wrapped in a soft roll.", price: 89, category: "Rolls", isAvailable: true },
+  { name: "Veg Roll", description: "Warm tortilla rolled with spiced vegetables and sauces.", price: 69, category: "Rolls", image: "/menu-images/momo_rolls.png", isAvailable: true },
+  { name: "Paneer Roll", description: "Marinated paneer chunks with veggies wrapped in a soft roll.", price: 89, category: "Rolls", image: "/menu-images/momo_rolls.png", isAvailable: true },
 
   // Dessert
   { name: "Choco Lava Cake", description: "Warm chocolate cake with a molten lava center.", price: 99, category: "Dessert", isAvailable: true },
@@ -156,7 +156,7 @@ const seedDB = async (): Promise<void> => {
     const bcrypt = await import("bcryptjs");
     const hashedPassword = await bcrypt.hash("admin123", 10);
     const User = (await import("./models")).User;
-    
+
     await User.deleteMany({});
     await User.create({
       email: "admin@thebluecup.com",

@@ -64,8 +64,14 @@ const menuItemSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   price: z.number().positive(),
-  category: z.enum(["Coffee", "Tea", "Pastry", "Sandwich", "Beverage", "Dessert"]),
-  image: z.string().url().optional(),
+  category: z.enum([
+    "Tea", "Coffee", "Ice Tea", "Mocktails", "Shakes", 
+    "Breads", "Burger", "Pav & Fries", "Sandwich", 
+    "Pasta", "Pizza", "Cafe Special", "Momo", "Maggi", 
+    "Rolls", "Dessert", "Pastry", "Beverage", "Frappes", 
+    "Hot Chocolate", "OTC"
+  ]),
+  image: z.string().optional(),
   isAvailable: z.boolean().optional(),
 });
 

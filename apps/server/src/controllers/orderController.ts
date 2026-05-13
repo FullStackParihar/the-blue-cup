@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { Order, MenuItem } from "../models";
 import type { ApiResponse, Order as OrderType } from "@the-blue-cup/types";
 import { Server as SocketIOServer } from "socket.io";
+import { whatsappService } from "../services/whatsappService";
+import { generateBillPdf } from "../services/pdfService";
 
 // ==========================================
 // Get All Orders
@@ -14,13 +16,13 @@ export const getAllOrders = async (req: Request, res: Response): Promise<void> =
     // Security: Only admins can see all orders. Guests MUST provide a deviceId.
     if (!user && !deviceId) {
       const authError = (req as any).authError;
-      res.status(401).json({ 
-        success: false, 
-        error: authError ? `Session Expired: ${authError}` : "Authentication required or provide deviceId" 
+      res.status(401).json({
+        success: false,
+        error: authError ? `Session Expired: ${authError}` : "Authentication required or provide deviceId"
       });
       return;
     }
-    
+
     // If user is not admin, they can ONLY see their own orders via deviceId
     if (user && user.role !== "admin" && !deviceId) {
       res.status(403).json({ success: false, error: "Access denied. Admin privileges required." });
@@ -45,7 +47,7 @@ export const getAllOrders = async (req: Request, res: Response): Promise<void> =
       }
       // timeframe === "all" -> no createdAt filter
     }
-    
+
     // Validate deviceId format if provided
     if (deviceId) {
       if (typeof deviceId !== "string" || !deviceId.startsWith("dev_")) {
@@ -115,7 +117,7 @@ const createOrderSchema = z.object({
 // ==========================================
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { tableNumber, items, customerName, specialInstructions, deviceId } = createOrderSchema.parse(req.body);
+    const { tableNumber, items, customerName, customerPhone, specialInstructions, deviceId } = createOrderSchema.parse(req.body);
     const userId = (req as any).user?.id;
 
     // 1. DUPLICATE PREVENTION: Check for identical order within 60 seconds
@@ -125,7 +127,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
         status: "Pending",
         createdAt: { $gte: new Date(Date.now() - 60000) }
       });
-      
+
       if (recentOrder) {
         res.status(409).json({ success: false, error: "Potential duplicate order. Please wait 60s." });
         return;
@@ -163,6 +165,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       tax,
       totalAmount,
       customerName: customerName || "Guest",
+      customerPhone,
       specialInstructions,
       deviceId,
       userId,
@@ -235,6 +238,21 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       if (order.status === "Ready") {
         io.to(order.deviceId).emit("orderReady", order);
       }
+    
+    // Automated WhatsApp Billing
+    if (status === "Completed" && order.customerPhone) {
+      (async () => {
+        try {
+          const pdfBuffer = generateBillPdf(order as any);
+          const message = `*The Blue Cup Cafe* ☕\n\nYour order has been completed! Thank you for visiting us. Your digital bill is attached below.\n\nTotal: ₹${order.totalAmount.toFixed(0)}`;
+          const fileName = `Bill_ORD_${order._id.toString().slice(-6).toUpperCase()}.pdf`;
+          
+          await whatsappService.sendMessage(order.customerPhone!, message, pdfBuffer, fileName);
+        } catch (err) {
+          console.error("Failed to send automated WhatsApp bill:", err);
+        }
+      })();
+    }
     }
 
     const response: ApiResponse<OrderType> = {

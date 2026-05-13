@@ -9,9 +9,9 @@ export default function QRCodesPanel() {
     // If the admin opens this on localhost, the QR codes would incorrectly point to localhost.
     // We default to the local network IP to make scanning from mobile seamless.
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      setBaseUrl("http://10.130.87.108:5173");
+      setBaseUrl("http://10.111.210.108:5173");
     } else {
-      setBaseUrl(window.location.origin);
+    setBaseUrl(window.location.origin);
     }
   }, []);
 

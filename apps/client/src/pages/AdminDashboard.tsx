@@ -7,8 +7,12 @@ import { socket, connectSocket, joinAdminRoom } from "../lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import type { OrderStatus, MenuItem, MenuCategory } from "@the-blue-cup/types";
 import QRCodesPanel from "../components/admin/QRCodesPanel";
+import WhatsAppLinkPanel from "../components/admin/WhatsAppLinkPanel";
+import { menuApi } from "../lib/api";
+import { generateWhatsAppBillLink } from "../utils/whatsapp";
+import { getImageUrl } from "../utils/image";
 
-type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes";
+type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes" | "whatsapp";
 
 const statusColors: Record<OrderStatus, { dot: string; text: string; bg: string; border: string }> = {
   Pending: { dot: "bg-alert-red", text: "text-primary-navy", bg: "bg-[#F3F4F6]", border: "border-border" },
@@ -86,11 +90,27 @@ export default function AdminDashboard() {
   // Menu Modal State
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<MenuItem> | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Menu Search/Filter State
+  const [menuSearch, setMenuSearch] = useState("");
+  const [menuFilter, setMenuFilter] = useState("All Categories");
 
   const { data: orders = [], isLoading, error: ordersError } = useOrders(undefined, undefined, timeframe);
   const { data: dailyReportOrders = [] } = useOrders(undefined, undefined, "today");
   const { data: menuItems = [] } = useMenuItems();
   const { data: analyticsData } = useAnalytics(period);
+
+  // Filtered Menu Items
+  const filteredMenuItems = useMemo(() => {
+    return menuItems.filter(item => {
+      const matchSearch = item.name.toLowerCase().includes(menuSearch.toLowerCase()) || 
+                          (item.description?.toLowerCase() || "").includes(menuSearch.toLowerCase());
+      const matchFilter = menuFilter === "All Categories" || item.category === menuFilter;
+      return matchSearch && matchFilter;
+    });
+  }, [menuItems, menuSearch, menuFilter]);
 
   const navigate = useNavigate();
 
@@ -141,7 +161,7 @@ export default function AdminDashboard() {
         if (ordersList.some((o: any) => o._id === newOrder._id)) return old;
         return [newOrder, ...ordersList];
       });
-      
+
       setNotification("🔔 New order!");
       playSound("order");
       setTimeout(() => setNotification(null), 5000);
@@ -263,23 +283,42 @@ export default function AdminDashboard() {
     };
   }, [dailyReportOrders]);
 
-  const handleSaveMenu = (e: React.FormEvent) => {
+  const handleSaveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem?.name || !editingItem?.price || !editingItem?.category) return;
 
-    if (editingItem._id) {
-      updateMenu.mutate({ id: editingItem._id, payload: editingItem });
-    } else {
-      createMenu.mutate({
-        name: editingItem.name,
-        description: editingItem.description || "",
-        price: Number(editingItem.price),
-        category: editingItem.category as MenuCategory,
-        isAvailable: editingItem.isAvailable ?? true
-      });
+    let imageUrl = editingItem.image || "";
+
+    if (selectedFile) {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+      try {
+        const response = await menuApi.uploadImage(formData);
+        imageUrl = response.imageUrl;
+      } catch (err) {
+        setNotification("❌ Image upload failed");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
     }
+
+    const payload = {
+      ...editingItem,
+      image: imageUrl,
+      price: Number(editingItem.price)
+    };
+
+    if (editingItem._id) {
+      updateMenu.mutate({ id: editingItem._id, payload });
+    } else {
+      createMenu.mutate(payload as any);
+    }
+    
     setIsMenuModalOpen(false);
     setEditingItem(null);
+    setSelectedFile(null);
   };
 
   const handleDeleteMenu = (id: string) => {
@@ -292,7 +331,8 @@ export default function AdminDashboard() {
     { id: "dashboard" as View, icon: "📊", label: "Analytics & Trends" },
     { id: "orders" as View, icon: "🛒", label: "Live Orders" },
     { id: "menu" as View, icon: "📋", label: "Menu Management" },
-    { id: "qr-codes" as View, icon: "📱", label: "Table QR Codes" },
+    { id: "qr-codes" as View, icon: "🔳", label: "Table QR Codes" },
+    { id: "whatsapp" as View, icon: "📱", label: "WhatsApp" },
   ];
 
   const renderSidebar = () => (
@@ -318,8 +358,8 @@ export default function AdminDashboard() {
         {navItems.map((item) => (
           <button key={item.id} onClick={() => { setView(item.id); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm transition-all duration-300 ${view === item.id
-                ? "bg-white/10 text-antique-cream font-bold border border-white/10 shadow-premium"
-                : "text-white/50 hover:text-white hover:bg-white/5"
+              ? "bg-white/10 text-antique-cream font-bold border border-white/10 shadow-premium"
+              : "text-white/50 hover:text-white hover:bg-white/5"
               }`}>
             <span className={`text-xl w-6 text-center transition-all ${view === item.id ? 'scale-110 grayscale-0' : 'grayscale opacity-60'}`}>{item.icon}</span>
             {item.label}
@@ -533,187 +573,187 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-                {/* Revenue Trend Chart */}
-                <div className="lg:col-span-8 card-premium p-8">
-                  <div className="flex items-center justify-between mb-10">
-                    <h3 className="font-heading text-2xl text-primary-navy font-black tracking-tight uppercase">Revenue Trend</h3>
-                    <div className="flex items-center gap-4 text-[10px] font-black text-muted uppercase tracking-widest">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-accent-gold" /> Sales Growth
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+                  {/* Revenue Trend Chart */}
+                  <div className="lg:col-span-8 card-premium p-8">
+                    <div className="flex items-center justify-between mb-10">
+                      <h3 className="font-heading text-2xl text-primary-navy font-black tracking-tight uppercase">Revenue Trend</h3>
+                      <div className="flex items-center gap-4 text-[10px] font-black text-muted uppercase tracking-widest">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-accent-gold" /> Sales Growth
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-64 w-full relative group">
+                      {/* SVG Chart */}
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                        <defs>
+                          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid Lines */}
+                        {[0, 25, 50, 75, 100].map(v => (
+                          <line key={v} x1="0" y1={v} x2="100" y2={v} stroke="#000" strokeWidth="0.1" strokeOpacity="0.1" />
+                        ))}
+
+                        {/* Line Path */}
+                        {analyticsData?.trend && analyticsData.trend.length > 1 ? (
+                          <>
+                            <motion.path
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ duration: 1.5, ease: "easeInOut" }}
+                              d={`M ${analyticsData.trend.map((d: any, i: number) => {
+                                const x = (i / (analyticsData.trend.length - 1)) * 100;
+                                const maxRev = Math.max(...analyticsData.trend.map((t: any) => t.revenue), 1);
+                                const y = 100 - (d.revenue / maxRev) * 100;
+                                return `${x},${y}`;
+                              }).join(" L ")}`}
+                              fill="none"
+                              stroke="#D4AF37"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d={`M 0,100 L ${analyticsData.trend.map((d: any, i: number) => {
+                                const x = (i / (analyticsData.trend.length - 1)) * 100;
+                                const maxRev = Math.max(...analyticsData.trend.map((t: any) => t.revenue), 1);
+                                const y = 100 - (d.revenue / maxRev) * 100;
+                                return `${x},${y}`;
+                              }).join(" L ")} L 100,100 Z`}
+                              fill="url(#chartGradient)"
+                            />
+                            {analyticsData.trend.map((d: any, i: number) => {
+                              const x = (i / (analyticsData.trend.length - 1)) * 100;
+                              const maxRev = Math.max(...analyticsData.trend.map((t: any) => t.revenue), 1);
+                              const y = 100 - (d.revenue / maxRev) * 100;
+                              return (
+                                <g key={i} className="group/point">
+                                  <circle cx={x} cy={y} r="1.5" fill="#1A2B48" className="cursor-pointer" />
+                                  <circle cx={x} cy={y} r="4" fill="#D4AF37" className="opacity-0 group-hover/point:opacity-20 transition-opacity" />
+                                </g>
+                              );
+                            })}
+                          </>
+                        ) : (
+                          <line x1="0" y1="100" x2="100" y2="100" stroke="#D4AF37" strokeWidth="1" strokeDasharray="4" opacity="0.2" />
+                        )}
+                      </svg>
+
+                      {/* Labels */}
+                      <div className="absolute bottom-[-30px] left-0 right-0 flex justify-between px-2">
+                        {analyticsData?.trend?.map((d: any, i: number) => (
+                          i % (period === 'monthly' ? 5 : 1) === 0 && (
+                            <span key={i} className="text-[8px] font-black text-muted uppercase tracking-tighter">
+                              {dayjs(d._id).format(period === 'monthly' ? 'D MMM' : 'ddd')}
+                            </span>
+                          )
+                        ))}
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="h-64 w-full relative group">
-                    {/* SVG Chart */}
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                      <defs>
-                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      
-                      {/* Grid Lines */}
-                      {[0, 25, 50, 75, 100].map(v => (
-                        <line key={v} x1="0" y1={v} x2="100" y2={v} stroke="#000" strokeWidth="0.1" strokeOpacity="0.1" />
-                      ))}
 
-                      {/* Line Path */}
-                      {analyticsData?.trend && analyticsData.trend.length > 1 ? (
-                        <>
-                          <motion.path
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            transition={{ duration: 1.5, ease: "easeInOut" }}
-                            d={`M ${analyticsData.trend.map((d: any, i: number) => {
-                              const x = (i / (analyticsData.trend.length - 1)) * 100;
-                              const maxRev = Math.max(...analyticsData.trend.map((t: any) => t.revenue), 1);
-                              const y = 100 - (d.revenue / maxRev) * 100;
-                              return `${x},${y}`;
-                            }).join(" L ")}`}
-                            fill="none"
-                            stroke="#D4AF37"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d={`M 0,100 L ${analyticsData.trend.map((d: any, i: number) => {
-                              const x = (i / (analyticsData.trend.length - 1)) * 100;
-                              const maxRev = Math.max(...analyticsData.trend.map((t: any) => t.revenue), 1);
-                              const y = 100 - (d.revenue / maxRev) * 100;
-                              return `${x},${y}`;
-                            }).join(" L ")} L 100,100 Z`}
-                            fill="url(#chartGradient)"
-                          />
-                          {analyticsData.trend.map((d: any, i: number) => {
-                            const x = (i / (analyticsData.trend.length - 1)) * 100;
-                            const maxRev = Math.max(...analyticsData.trend.map((t: any) => t.revenue), 1);
-                            const y = 100 - (d.revenue / maxRev) * 100;
-                            return (
-                              <g key={i} className="group/point">
-                                <circle cx={x} cy={y} r="1.5" fill="#1A2B48" className="cursor-pointer" />
-                                <circle cx={x} cy={y} r="4" fill="#D4AF37" className="opacity-0 group-hover/point:opacity-20 transition-opacity" />
-                              </g>
-                            );
-                          })}
-                        </>
-                      ) : (
-                        <line x1="0" y1="100" x2="100" y2="100" stroke="#D4AF37" strokeWidth="1" strokeDasharray="4" opacity="0.2" />
+                  {/* Top Sellers */}
+                  <div className="lg:col-span-4 card-premium p-8">
+                    <h3 className="font-heading text-2xl text-primary-navy font-black tracking-tight uppercase mb-8">Top Creations</h3>
+                    <div className="space-y-6">
+                      {analyticsData?.topItems?.map((item: any, i: number) => (
+                        <div key={i} className="group">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-xs font-black text-primary-navy uppercase tracking-wide truncate pr-4">{item.name}</p>
+                            <p className="text-[10px] font-black text-accent-gold">{item.count} Sold</p>
+                          </div>
+                          <div className="h-1.5 bg-antique-cream rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(item.count / analyticsData.topItems[0].count) * 100}%` }}
+                              className="h-full bg-primary-navy group-hover:bg-accent-gold transition-colors"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {!analyticsData?.topItems?.length && (
+                        <div className="py-12 text-center text-muted font-black text-[10px] uppercase tracking-widest">No sales data yet</div>
                       )}
-                    </svg>
-
-                    {/* Labels */}
-                    <div className="absolute bottom-[-30px] left-0 right-0 flex justify-between px-2">
-                      {analyticsData?.trend?.map((d: any, i: number) => (
-                        i % (period === 'monthly' ? 5 : 1) === 0 && (
-                          <span key={i} className="text-[8px] font-black text-muted uppercase tracking-tighter">
-                            {dayjs(d._id).format(period === 'monthly' ? 'D MMM' : 'ddd')}
-                          </span>
-                        )
-                      ))}
                     </div>
                   </div>
                 </div>
-
-                {/* Top Sellers */}
-                <div className="lg:col-span-4 card-premium p-8">
-                  <h3 className="font-heading text-2xl text-primary-navy font-black tracking-tight uppercase mb-8">Top Creations</h3>
-                  <div className="space-y-6">
-                    {analyticsData?.topItems?.map((item: any, i: number) => (
-                      <div key={i} className="group">
-                        <div className="flex justify-between items-center mb-2">
-                          <p className="text-xs font-black text-primary-navy uppercase tracking-wide truncate pr-4">{item.name}</p>
-                          <p className="text-[10px] font-black text-accent-gold">{item.count} Sold</p>
-                        </div>
-                        <div className="h-1.5 bg-antique-cream rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(item.count / analyticsData.topItems[0].count) * 100}%` }}
-                            className="h-full bg-primary-navy group-hover:bg-accent-gold transition-colors"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    {!analyticsData?.topItems?.length && (
-                      <div className="py-12 text-center text-muted font-black text-[10px] uppercase tracking-widest">No sales data yet</div>
-                    )}
-                  </div>
-                </div>
-              </div>
               )}
 
               {/* Transaction Repository (Detailed List) */}
               {period !== "daily" && (
-              <div className="mt-12">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="font-heading text-3xl text-primary-navy font-black tracking-tight uppercase">Transaction Repository</h3>
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest mt-1">Full detailed audit of recent activity</p>
+                <div className="mt-12">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h3 className="font-heading text-3xl text-primary-navy font-black tracking-tight uppercase">Transaction Repository</h3>
+                      <p className="text-[10px] font-black text-muted uppercase tracking-widest mt-1">Full detailed audit of recent activity</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-antique-cream p-1 rounded-xl border border-border">
+                      {["today", "monthly", "all"].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setTimeframe(t)}
+                          className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${timeframe === t ? "bg-primary-navy text-white shadow-soft" : "text-muted hover:bg-white"}`}
+                        >
+                          {t === "today" ? "Daily Artisan" : t === "monthly" ? "Monthly Ledger" : "Full Repository"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-antique-cream p-1 rounded-xl border border-border">
-                    {["today", "monthly", "all"].map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setTimeframe(t)}
-                        className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${timeframe === t ? "bg-primary-navy text-white shadow-soft" : "text-muted hover:bg-white"}`}
-                      >
-                        {t === "today" ? "Daily Artisan" : t === "monthly" ? "Monthly Ledger" : "Full Repository"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="card-premium overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-antique-cream border-b border-border">
-                          <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Order ID</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Table / Guest</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Creation Time</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Status</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em] text-right">Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/40">
-                        {orders.length > 0 ? (
-                          orders.map((order) => (
-                            <tr key={order._id} className="hover:bg-antique-cream/30 transition-colors group">
-                              <td className="px-8 py-6">
-                                <span className="text-[10px] font-black text-primary-navy uppercase tracking-widest">#ORD-{order._id?.slice(-6).toUpperCase()}</span>
-                              </td>
-                              <td className="px-8 py-6">
-                                <span className="font-bold text-primary-navy">{order.tableNumber ? `Table ${order.tableNumber}` : "Artisan Guest"}</span>
-                              </td>
-                              <td className="px-8 py-6">
-                                <span className="text-[11px] text-muted font-medium">{order.createdAt ? dayjs(order.createdAt).format("MMM DD, hh:mm A") : "—"}</span>
-                              </td>
-                              <td className="px-8 py-6">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${statusColors[order.status as OrderStatus]?.dot || "bg-gray-300"}`} />
-                                  <span className="text-[10px] font-black uppercase tracking-widest text-primary-navy">{order.status}</span>
-                                </div>
-                              </td>
-                              <td className="px-8 py-6 text-right">
-                                <span className="font-heading text-lg font-black text-primary-navy tracking-tight">₹{order.totalAmount.toFixed(0)}</span>
+                  <div className="card-premium overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-antique-cream border-b border-border">
+                            <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Order ID</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Table / Guest</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Creation Time</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Status</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em] text-right">Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {orders.length > 0 ? (
+                            orders.map((order) => (
+                              <tr key={order._id} className="hover:bg-antique-cream/30 transition-colors group">
+                                <td className="px-8 py-6">
+                                  <span className="text-[10px] font-black text-primary-navy uppercase tracking-widest">#ORD-{order._id?.slice(-6).toUpperCase()}</span>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <span className="font-bold text-primary-navy">{order.tableNumber ? `Table ${order.tableNumber}` : "Artisan Guest"}</span>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <span className="text-[11px] text-muted font-medium">{order.createdAt ? dayjs(order.createdAt).format("MMM DD, hh:mm A") : "—"}</span>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${statusColors[order.status as OrderStatus]?.dot || "bg-gray-300"}`} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary-navy">{order.status}</span>
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6 text-right">
+                                  <span className="font-heading text-lg font-black text-primary-navy tracking-tight">₹{order.totalAmount.toFixed(0)}</span>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="px-8 py-20 text-center">
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest opacity-40">No transactions recorded in this cycle</p>
                               </td>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className="px-8 py-20 text-center">
-                              <p className="text-[10px] font-black text-muted uppercase tracking-widest opacity-40">No transactions recorded in this cycle</p>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-              </div>
               )}
             </>
           )}
@@ -734,8 +774,8 @@ export default function AdminDashboard() {
                       playSound('order');
                     }}
                     className={`px-5 py-3 rounded-2xl border flex items-center gap-3 shadow-soft transition-all active:scale-95 ${isAudioEnabled
-                        ? 'bg-leaf/10 border-leaf/20 text-leaf'
-                        : 'bg-alert-red/10 border-alert-red/20 text-alert-red animate-pulse'
+                      ? 'bg-leaf/10 border-leaf/20 text-leaf'
+                      : 'bg-alert-red/10 border-alert-red/20 text-alert-red animate-pulse'
                       }`}
                   >
                     <span className="text-sm">{isAudioEnabled ? '🔊' : '🔇'}</span>
@@ -897,12 +937,25 @@ export default function AdminDashboard() {
                                           <div className="absolute inset-0 bg-white/30 translate-y-full group-hover/btn:translate-y-0 transition-transform" />
                                         </button>
                                       ) : order.status === "Completed" ? (
-                                        <button
-                                          onClick={() => import("../utils/pdf").then(({ generateInvoice }) => generateInvoice(order as any))}
-                                          className="btn-secondary !py-3 !px-5 text-[9px]"
-                                        >
-                                          RECEIPT
-                                        </button>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => import("../utils/pdf").then(({ generateInvoice }) => generateInvoice(order as any))}
+                                            className="btn-secondary !py-3 !px-5 text-[9px]"
+                                          >
+                                            RECEIPT
+                                          </button>
+                                          {order.customerPhone && (
+                                            <button
+                                              onClick={() => {
+                                                const waLink = generateWhatsAppBillLink(order as any);
+                                                window.open(waLink, "_blank");
+                                              }}
+                                              className="bg-leaf/10 text-leaf border border-leaf/20 hover:bg-leaf hover:text-white transition-all rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                            >
+                                              <span>📱</span> WA Bill
+                                            </button>
+                                          )}
+                                        </div>
                                       ) : null}
                                     </div>
                                   </div>
@@ -943,12 +996,22 @@ export default function AdminDashboard() {
               {/* Search + Filter */}
               <div className="flex flex-col md:flex-row gap-4 mb-10">
                 <div className="relative flex-1">
-                  <input type="text" placeholder="Search menu items..." className="input-premium pl-12 w-full" />
+                  <input 
+                    type="text" 
+                    placeholder="Search menu items..." 
+                    className="input-premium pl-12 w-full"
+                    value={menuSearch}
+                    onChange={(e) => setMenuSearch(e.target.value)}
+                  />
                   <svg className="w-5 h-5 text-muted absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <select className="input-premium md:w-64 appearance-none cursor-pointer w-full">
+                <select 
+                  className="input-premium md:w-64 appearance-none cursor-pointer w-full"
+                  value={menuFilter}
+                  onChange={(e) => setMenuFilter(e.target.value)}
+                >
                   <option>All Categories</option>
                   {Array.from(new Set(menuItems.map((i) => i.category))).map((c) => <option key={c}>{c}</option>)}
                 </select>
@@ -956,10 +1019,10 @@ export default function AdminDashboard() {
 
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-6 md:hidden">
-                {menuItems.map((item) => (
+                {filteredMenuItems.map((item) => (
                   <div key={item._id} className="card-premium p-6 flex flex-col gap-6 relative group">
                     <div className="flex items-center gap-4">
-                      <img src={`https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=80&h=80&fit=crop`} alt="" className="w-16 h-16 rounded-2xl object-cover ring-4 ring-white shadow-soft" />
+                      <img src={getImageUrl(item.image) || `https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=80&h=80&fit=crop`} alt={item.name} className="w-16 h-16 rounded-2xl object-cover ring-4 ring-white shadow-soft" />
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <h3 className="text-lg text-primary-navy font-black leading-tight mb-1">{item.name}</h3>
@@ -1004,11 +1067,11 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/30">
-                      {menuItems.map((item) => (
+                      {filteredMenuItems.map((item) => (
                         <tr key={item._id} className="hover:bg-cream-dark/20 transition-all group">
                           <td className="px-8 py-6">
                             <div className="flex items-center gap-4">
-                              <img src={`https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=80&h=80&fit=crop`} alt="" className="w-12 h-12 rounded-2xl object-cover ring-4 ring-white shadow-soft" />
+                              <img src={getImageUrl(item.image) || `https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=80&h=80&fit=crop`} alt={item.name} className="w-12 h-12 rounded-2xl object-cover ring-4 ring-white shadow-soft" />
                               <div>
                                 <span className="block text-sm text-primary-navy font-black leading-none mb-1">{item.name}</span>
                                 <span className="text-[11px] text-muted font-medium line-clamp-1 max-w-[200px]">{item.description}</span>
@@ -1030,7 +1093,7 @@ export default function AdminDashboard() {
                             </button>
                           </td>
                           <td className="px-8 py-6">
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2 transition-all">
                               <button onClick={() => { setEditingItem(item); setIsMenuModalOpen(true); }} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-primary-navy hover:shadow-soft hover:border-accent-gold transition-all">✏️</button>
                               <button onClick={() => handleDeleteMenu(item._id!)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-alert-red hover:shadow-soft hover:border-alert-red/30 transition-all">🗑</button>
                             </div>
@@ -1157,6 +1220,12 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {view === "whatsapp" && (
+            <div className="max-w-2xl mx-auto h-full">
+              <WhatsAppLinkPanel />
+            </div>
+          )}
         </div>
       </main>
 
@@ -1187,7 +1256,13 @@ export default function AdminDashboard() {
                     <select required value={editingItem?.category || ""} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value as MenuCategory })}
                       className="input-premium bg-white">
                       <option value="">Choose...</option>
-                      {["Coffee", "Tea", "Pastry", "Sandwich", "Beverage", "Dessert"].map(c => <option key={c} value={c}>{c}</option>)}
+                      {[
+                        "Tea", "Coffee", "Ice Tea", "Mocktails", "Shakes", 
+                        "Breads", "Burger", "Pav & Fries", "Sandwich", 
+                        "Pasta", "Pizza", "Cafe Special", "Momo", "Maggi", 
+                        "Rolls", "Dessert", "Pastry", "Beverage", "Frappes", 
+                        "Hot Chocolate", "OTC"
+                      ].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1202,9 +1277,37 @@ export default function AdminDashboard() {
                     className="input-premium resize-none" />
                 </div>
 
+                <div>
+                  <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">Product Image (Cloudinary)</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 bg-white rounded-2xl border-2 border-dashed border-border/50 flex items-center justify-center overflow-hidden shrink-0">
+                      {selectedFile ? (
+                        <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="w-full h-full object-cover" />
+                      ) : editingItem?.image ? (
+                        <img src={editingItem.image} alt="Current" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl">📸</span>
+                      )}
+                    </div>
+                    <label className="flex-1 cursor-pointer">
+                      <div className="btn-secondary py-3 text-[10px] text-center border-2 border-dashed">
+                        {selectedFile ? selectedFile.name : "Choose New Image"}
+                      </div>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+                </div>
+
                 <div className="pt-8 flex gap-4">
-                  <button type="button" onClick={() => setIsMenuModalOpen(false)} className="flex-1 btn-secondary py-4 text-xs uppercase tracking-widest font-black">Cancel</button>
-                  <button type="submit" className="flex-1 btn-primary py-4 text-xs uppercase tracking-widest font-black shadow-premium">Commit Changes</button>
+                  <button type="button" disabled={isUploading} onClick={() => { setIsMenuModalOpen(false); setSelectedFile(null); }} className="flex-1 btn-secondary py-4 text-xs uppercase tracking-widest font-black">Cancel</button>
+                  <button type="submit" disabled={isUploading} className="flex-1 btn-primary py-4 text-xs uppercase tracking-widest font-black shadow-premium flex items-center justify-center gap-2">
+                    {isUploading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        Uploading...
+                      </>
+                    ) : editingItem?._id ? "Commit Changes" : "Create Item"}
+                  </button>
                 </div>
               </form>
             </motion.div>

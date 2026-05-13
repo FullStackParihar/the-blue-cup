@@ -29,6 +29,21 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+**/logs
+**/build.log
+
+# WhatsApp Web Session
+**/.wwebjs_auth
+**/.wwebjs_cache
+**/SingletonLock
+
+# Build & Cache
+**/dist
+**/node_modules
+**/.turbo
+*.tsbuildinfo
+*.d.ts
+!src/**/*.d.ts
 
 # Testing
 coverage/

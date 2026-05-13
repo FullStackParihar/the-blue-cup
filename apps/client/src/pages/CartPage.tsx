@@ -5,6 +5,7 @@ import { useCartStore } from "../stores/cartStore";
 import { useCreateOrder } from "../hooks/useApi";
 import { getDeviceId } from "../lib/socket";
 import { LeafDecoration, SmallLeaf } from "../components/decorations/LeafDecoration";
+import { getImageUrl } from "../utils/image";
 
 const categoryImages: Record<string, string> = {
   Coffee: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=100&h=100&fit=crop",
@@ -19,6 +20,8 @@ export default function CartPage() {
   const navigate = useNavigate();
   const { items, removeItem, updateQuantity, getTotalAmount, specialInstructions, setSpecialInstructions, clearCart, tableNumber } = useCartStore();
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const createOrder = useCreateOrder();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,6 +31,10 @@ export default function CartPage() {
   const total = subtotal + tax;
 
   const handleCheckout = () => {
+    if (customerPhone && !/^\d{10}$/.test(customerPhone)) {
+      alert("Please enter a valid 10-digit WhatsApp number.");
+      return;
+    }
     setIsProcessing(true);
     setTimeout(() => {
       createOrder.mutate({
@@ -37,6 +44,8 @@ export default function CartPage() {
           quantity: i.quantity,
           customization: i.customization
         })),
+        customerName: customerName || "Guest",
+        customerPhone,
         specialInstructions,
         deviceId: getDeviceId()
       }, {
@@ -151,7 +160,7 @@ export default function CartPage() {
                 className="flex items-center gap-6 py-6 border-b border-border/50 last:border-0 last:pb-0 first:pt-0 group"
               >
                 <div className="w-16 h-16 bg-cream-dark rounded-2xl flex items-center justify-center shrink-0 overflow-hidden shadow-soft">
-                  <img src={categoryImages[item.category] || categoryImages.Coffee} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                  <img src={getImageUrl(item.image) || categoryImages[item.category] || categoryImages.Coffee} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -175,6 +184,26 @@ export default function CartPage() {
               </motion.div>
             ))}
           </AnimatePresence>
+        </div>
+
+        {/* Guest Details */}
+        <div className="card-premium p-6 sm:p-8 mb-8">
+          <label className="block text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-6 px-1">Guest Details</label>
+          <div className="space-y-6">
+            <div>
+              <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Full Name (Optional)" className="input-premium" />
+            </div>
+            <div className="relative">
+              <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="WhatsApp Number" className="input-premium pl-14" />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 border-r border-border pr-3">
+                <span className="text-[10px] font-black text-muted">🇮🇳</span>
+                <span className="text-xs font-bold text-primary-navy">+91</span>
+              </div>
+            </div>
+            <p className="text-[9px] text-muted font-bold uppercase tracking-widest px-1">
+              * Needed for digital bill on WhatsApp
+            </p>
+          </div>
         </div>
 
         {/* Special Instructions */}

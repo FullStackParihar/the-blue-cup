@@ -59,6 +59,9 @@ const MenuItemSchema = new Schema<MenuItemDoc>(
         "Dessert",
         "Pastry",
         "Beverage",
+        "Frappes",
+        "Hot Chocolate",
+        "OTC",
       ],
     },
     image: {

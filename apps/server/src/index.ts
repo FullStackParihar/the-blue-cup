@@ -30,7 +30,7 @@ const allowedOrigins = process.env.CLIENT_URL
 const io = new SocketIOServer(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      if (!origin || process.env.NODE_ENV === "development" || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -40,6 +40,10 @@ const io = new SocketIOServer(httpServer, {
     credentials: true,
   },
 });
+
+// Pass io to whatsappService
+import { whatsappService } from "./services/whatsappService";
+whatsappService.setIo(io);
 
 // Socket.io connection handler
 io.on("connection", (socket) => {
@@ -89,7 +93,7 @@ app.set("io", io);
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      if (!origin || process.env.NODE_ENV === "development" || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -101,6 +105,7 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(express.static("public"));
 
 // ==========================================
 // Routes

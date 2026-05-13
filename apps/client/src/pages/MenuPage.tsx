@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMenuItems } from "../hooks/useApi";
 import { useCartStore } from "../stores/cartStore";
+import { getImageUrl } from "../utils/image";
 import ItemDetailModal from "../components/menu/ItemDetailModal";
 import type { MenuItem } from "@the-blue-cup/types";
 import BasketPopup from "../components/BasketPopup";
@@ -147,7 +148,7 @@ export default function MenuPage() {
     if (existing) {
       updateQuantity(existing.cartItemId || existing._id, existing.quantity + 1);
     } else {
-      addItem({ _id: item._id!, name: item.name, price: item.price, quantity: 1, category: item.category });
+      addItem({ _id: item._id!, name: item.name, price: item.price, quantity: 1, category: item.category, image: item.image });
     }
   };
 
@@ -241,8 +242,8 @@ export default function MenuPage() {
                 key={cat}
                 onClick={() => setActiveCat(cat)}
                 className={`snap-start shrink-0 whitespace-nowrap min-w-[4.5rem] sm:min-w-0 px-4 py-2 sm:px-8 sm:py-3.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black uppercase tracking-[0.16em] sm:tracking-[0.2em] transition-all border shadow-soft active:scale-95 ${activeCat === cat
-                    ? "bg-primary-navy border-primary-navy text-antique-cream shadow-premium"
-                    : "bg-white border-border text-primary-navy hover:border-accent-gold/40"
+                  ? "bg-primary-navy border-primary-navy text-antique-cream shadow-premium"
+                  : "bg-white border-border text-primary-navy hover:border-accent-gold/40"
                   }`}
               >
                 {cat}
@@ -282,7 +283,7 @@ export default function MenuPage() {
                   >
                     <div className="w-full h-40 sm:h-64 relative overflow-hidden bg-cream-dark">
                       <img
-                        src={categoryImages[item.category] || categoryImages.Coffee}
+                        src={getImageUrl(item.image) || categoryImages[item.category] || categoryImages.Coffee}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
