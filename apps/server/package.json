@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --exit-child src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npx puppeteer browsers install chrome",
     "start": "node dist/index.js",
+    "postinstall": "npx puppeteer browsers install chrome",
     "clean": "rm -rf dist && (fuser -k 5000/tcp || true) && (rm -rf .wwebjs_auth/session/SingletonLock || true)",
     "seed": "ts-node-dev --transpile-only src/seed.ts"
   },
