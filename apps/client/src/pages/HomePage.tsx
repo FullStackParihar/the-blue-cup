@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
+import BrandCoverLogo from "../components/decorations/BrandCoverLogo";
 
 const categories = [
   { id: "Coffee", name: "Artisan Coffee", desc: "Hand-poured perfection from single-origin beans", icon: "☕", img: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&h=600&fit=crop" },
@@ -37,55 +38,70 @@ export default function HomePage() {
 
         {/* Content */}
         <motion.div style={{ opacity: heroOpacity }} className="relative z-10 w-full px-5 sm:px-8">
-          <div className="max-w-6xl mx-auto pt-24 pb-16 sm:pt-32 sm:pb-24">
+          <div className="max-w-7xl mx-auto pt-28 pb-16 sm:pt-36 sm:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+            
+            {/* Left Column: Copy & Actions */}
+            <div className="lg:col-span-7 flex flex-col items-start text-left order-2 lg:order-1">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 mb-6 sm:mb-8"
+              >
+                <span className="w-2 h-2 rounded-full bg-accent-gold animate-pulse" />
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-accent-gold font-black">Crafting Excellence Since 2026</span>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                className="text-5xl sm:text-7xl md:text-8xl font-heading font-black leading-[0.9] tracking-tighter text-white mb-6 sm:mb-8"
+              >
+                THE<br />
+                <span className="text-gradient-gold">BLUE CUP</span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                className="text-base sm:text-lg md:text-xl text-white/60 max-w-lg mb-10 sm:mb-12 leading-relaxed font-medium"
+              >
+                Where artisan traditions meet modern elegance. Experience a new standard of cafe dining with real-time digital ordering.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+                className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+              >
+                <Link to="/menu" className="group px-8 sm:px-12 py-4 sm:py-5 bg-accent-gold text-primary-navy rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-gold hover:brightness-110 transition-all active:scale-95 flex items-center justify-center gap-2">
+                  Explore Menu
+                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </Link>
+                <Link to="/orders" className="px-8 sm:px-12 py-4 sm:py-5 border-2 border-white/25 hover:border-accent-gold/60 text-white rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] transition-all active:scale-95 text-center backdrop-blur-sm">
+                  Track Order
+                </Link>
+              </motion.div>
+
+              {/* Stats Row */}
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+                className="flex gap-8 sm:gap-14 mt-14 sm:mt-20 pt-8 border-t border-white/10 w-full"
+              >
+                {stats.map((s) => (
+                  <div key={s.label}>
+                    <p className="font-heading text-3xl sm:text-4xl font-black text-white leading-none">{s.value}</p>
+                    <p className="text-[9px] sm:text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">{s.sub}</p>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Right Column: Floating Brand Cover Logo */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 mb-6 sm:mb-8"
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 80, damping: 15, delay: 0.4 }}
+              className="lg:col-span-5 flex justify-center w-full max-w-[420px] mx-auto lg:max-w-none order-1 lg:order-2 mb-10 lg:mb-0 animate-float"
             >
-              <span className="w-2 h-2 rounded-full bg-accent-gold animate-pulse" />
-              <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-accent-gold font-black">Crafting Excellence Since 2026</span>
+              <BrandCoverLogo showBorder={true} className="w-full aspect-[3/4.2] max-w-[340px] sm:max-w-[380px] shadow-2xl hover:shadow-[0_20px_50px_rgba(201,168,76,0.25)] border-accent-gold/20" />
             </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-              className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-heading font-black leading-[0.85] tracking-tighter text-white mb-6 sm:mb-8"
-            >
-              THE<br />
-              <span className="text-gradient-gold">BLUE CUP</span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="text-base sm:text-lg md:text-xl text-white/60 max-w-lg mb-10 sm:mb-12 leading-relaxed font-medium"
-            >
-              Where artisan traditions meet modern elegance. Skip the wait, savor the moment.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-              className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
-            >
-              <Link to="/menu" className="group px-8 sm:px-12 py-4 sm:py-5 bg-accent-gold text-primary-navy rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-gold hover:brightness-110 transition-all active:scale-95 flex items-center justify-center gap-2">
-                Explore Menu
-                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-              </Link>
-              <Link to="/orders" className="px-8 sm:px-12 py-4 sm:py-5 border-2 border-white/25 hover:border-accent-gold/60 text-white rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] transition-all active:scale-95 text-center backdrop-blur-sm">
-                Track Order
-              </Link>
-            </motion.div>
-
-            {/* Stats Row */}
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-              className="flex gap-8 sm:gap-14 mt-14 sm:mt-20 pt-8 border-t border-white/10"
-            >
-              {stats.map((s) => (
-                <div key={s.label}>
-                  <p className="font-heading text-3xl sm:text-4xl font-black text-white leading-none">{s.value}</p>
-                  <p className="text-[9px] sm:text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">{s.sub}</p>
-                </div>
-              ))}
-            </motion.div>
           </div>
         </motion.div>
       </section>

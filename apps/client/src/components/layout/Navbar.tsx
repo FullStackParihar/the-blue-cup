@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCartStore } from "../../stores/cartStore";
 import { useUserStore } from "../../stores/userStore";
+import { BlueCupSVG } from "../decorations/BrandCoverLogo";
 
 
 export default function Navbar() {
@@ -38,12 +39,17 @@ export default function Navbar() {
               }
               (window as any)._lastLogoClick = now;
             }}
-            className="flex flex-col items-start z-50 group min-w-0 shrink cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 z-50 group min-w-0 shrink cursor-pointer"
           >
-            <h1 className="font-heading text-base sm:text-2xl text-primary-navy font-black leading-none tracking-tight group-hover:scale-105 transition-transform origin-left truncate">The Blue Cup</h1>
-            <div className="flex items-center gap-1 mt-1 opacity-60">
-              <span className="w-1 h-1 rounded-full bg-accent-gold shrink-0" />
-              <span className="hidden min-[380px]:inline text-[9px] text-primary-navy font-black uppercase tracking-[0.2em] whitespace-nowrap">Est. 2026</span>
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-cream-dark rounded-xl flex items-center justify-center border border-border group-hover:border-accent-gold/40 transition-colors shadow-soft overflow-hidden">
+              <BlueCupSVG className="w-full h-full p-1 sm:p-1.5" />
+            </div>
+            <div className="flex flex-col items-start min-w-0">
+              <h1 className="font-heading text-xs sm:text-base md:text-lg text-primary-navy font-black leading-none tracking-[0.12em] group-hover:translate-x-0.5 transition-transform truncate">THE BLUE CUP</h1>
+              <div className="flex items-center gap-1 mt-0.5 opacity-60">
+                <span className="w-1 h-1 rounded-full bg-accent-gold shrink-0 animate-pulse" />
+                <span className="hidden min-[380px]:inline text-[7px] sm:text-[8px] text-primary-navy font-black uppercase tracking-[0.18em] whitespace-nowrap">Sip of Elegance</span>
+              </div>
             </div>
           </div>
 
