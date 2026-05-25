@@ -33,7 +33,8 @@ export default function MenuPage() {
   const initialCat = searchParams.get("category") || "All";
   const [activeCat, setActiveCat] = useState(initialCat);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const { data: menuItems = [], isLoading, error } = useMenuItems();
+  const { data: rawMenuItems = [], isLoading, error } = useMenuItems();
+  const menuItems = rawMenuItems.filter((item) => item.isAvailable);
   const addItem = useCartStore((s) => s.addItem);
 
   const [isBasketOpen, setIsBasketOpen] = useState(false);
