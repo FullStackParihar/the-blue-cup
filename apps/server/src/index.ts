@@ -41,9 +41,6 @@ const io = new SocketIOServer(httpServer, {
   },
 });
 
-// Pass io to whatsappService
-import { whatsappService } from "./services/whatsappService";
-whatsappService.setIo(io);
 
 // Socket.io connection handler
 io.on("connection", (socket) => {
