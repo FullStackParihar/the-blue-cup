@@ -1,18 +1,13 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 
 import connectDB from "./config/db";
 import routes from "./routes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
-
-// ==========================================
-// Load Environment Variables
-// ==========================================
-dotenv.config();
 
 // ==========================================
 // Initialize Express App
@@ -41,6 +36,9 @@ const io = new SocketIOServer(httpServer, {
   },
 });
 
+// Pass io to whatsappService
+import { whatsappService } from "./services/whatsappService";
+whatsappService.setIo(io);
 
 // Socket.io connection handler
 io.on("connection", (socket) => {

@@ -37,7 +37,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       role: "customer"
     });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
+    const secret = process.env.JWT_SECRET || "blue-cup-super-secret";
+    const token = jwt.sign({ id: user._id, role: user.role }, secret, {
       expiresIn: "30d",
     });
 
@@ -74,7 +75,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
+    const secret = process.env.JWT_SECRET || "blue-cup-super-secret";
+    const token = jwt.sign({ id: user._id, role: user.role }, secret, {
       expiresIn: "1d",
     });
 

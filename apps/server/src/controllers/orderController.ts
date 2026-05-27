@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Order, MenuItem } from "../models";
 import type { ApiResponse, Order as OrderType } from "@the-blue-cup/types";
 import { Server as SocketIOServer } from "socket.io";
+import { whatsappService } from "../services/whatsappService";
 import { generateBillPdf } from "../services/pdfService";
 
 // ==========================================
@@ -237,6 +238,21 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       if (order.status === "Ready") {
         io.to(order.deviceId).emit("orderReady", order);
       }
+    
+    // Automated WhatsApp Billing
+    if (status === "Completed" && order.customerPhone) {
+      (async () => {
+        try {
+          const pdfBuffer = generateBillPdf(order as any);
+          const message = `*The Blue Cup Cafe* ☕\n\nYour order has been completed! Thank you for visiting us. Your digital bill is attached below.\n\nTotal: ₹${order.totalAmount.toFixed(0)}`;
+          const fileName = `Bill_ORD_${order._id.toString().slice(-6).toUpperCase()}.pdf`;
+          
+          await whatsappService.sendMessage(order.customerPhone!, message, pdfBuffer, fileName);
+        } catch (err) {
+          console.error("Failed to send automated WhatsApp bill:", err);
+        }
+      })();
+    }
     }
 
     const response: ApiResponse<OrderType> = {

@@ -5,11 +5,12 @@ const JWT_SECRET = process.env.JWT_SECRET || "blue-cup-super-secret";
 
 export const protect = (req: Request, res: Response, next: NextFunction): void => {
   let token;
+  const secret = process.env.JWT_SECRET || "blue-cup-super-secret";
 
   if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
     try {
       token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, secret);
       (req as any).user = decoded;
       next();
     } catch (error) {
@@ -29,10 +30,11 @@ export const adminOnly = (req: Request, res: Response, next: NextFunction): void
 };
 
 export const optionalProtect = (req: Request, res: Response, next: NextFunction): void => {
+  const secret = process.env.JWT_SECRET || "blue-cup-super-secret";
   if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
     try {
       const token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, secret);
       (req as any).user = decoded;
     } catch (error) {
       // Capture error but don't block (optional)

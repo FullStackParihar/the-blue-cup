@@ -41,7 +41,7 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto pt-28 pb-16 sm:pt-36 sm:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
             
             {/* Left Column: Copy & Actions */}
-            <div className="lg:col-span-7 flex flex-col items-start text-left order-2 lg:order-1">
+            <div className="lg:col-span-7 flex flex-col items-start text-left order-1 lg:order-1">
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 mb-6 sm:mb-8"
@@ -97,9 +97,9 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 80, damping: 15, delay: 0.4 }}
-              className="lg:col-span-5 flex justify-center w-full max-w-[420px] mx-auto lg:max-w-none order-1 lg:order-2 mb-10 lg:mb-0 animate-float"
+              className="lg:col-span-5 flex justify-center w-full max-w-[420px] mx-auto lg:max-w-none order-2 lg:order-2 mb-10 lg:mb-0 animate-float"
             >
-              <BrandCoverLogo showBorder={true} className="w-full aspect-[3/4.2] max-w-[340px] sm:max-w-[380px] shadow-2xl hover:shadow-[0_20px_50px_rgba(201,168,76,0.25)] border-accent-gold/20" />
+              <BrandCoverLogo showBorder={true} className="w-[290px] sm:w-full aspect-[3/4.2] max-w-[340px] sm:max-w-[380px] shadow-2xl hover:shadow-[0_20px_50px_rgba(201,168,76,0.25)] border-accent-gold/20" />
             </motion.div>
 
           </div>

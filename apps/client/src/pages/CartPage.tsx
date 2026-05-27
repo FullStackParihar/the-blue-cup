@@ -32,7 +32,7 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     if (customerPhone && !/^\d{10}$/.test(customerPhone)) {
-      alert("Please enter a valid 10-digit contact number.");
+      alert("Please enter a valid 10-digit WhatsApp number.");
       return;
     }
     setIsProcessing(true);
@@ -194,12 +194,15 @@ export default function CartPage() {
               <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Full Name (Optional)" className="input-premium" />
             </div>
             <div className="relative">
-              <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Contact Number (Optional)" className="input-premium pl-14" />
+              <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="WhatsApp Number" className="input-premium pl-14" />
               <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 border-r border-border pr-3">
                 <span className="text-[10px] font-black text-muted">🇮🇳</span>
                 <span className="text-xs font-bold text-primary-navy">+91</span>
               </div>
             </div>
+            <p className="text-[9px] text-muted font-bold uppercase tracking-widest px-1">
+              * Needed for digital bill on WhatsApp
+            </p>
           </div>
         </div>
 

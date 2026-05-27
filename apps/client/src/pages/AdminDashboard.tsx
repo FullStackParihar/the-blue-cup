@@ -7,10 +7,12 @@ import { socket, connectSocket, joinAdminRoom } from "../lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import type { OrderStatus, MenuItem, MenuCategory } from "@the-blue-cup/types";
 import QRCodesPanel from "../components/admin/QRCodesPanel";
+import WhatsAppLinkPanel from "../components/admin/WhatsAppLinkPanel";
 import { menuApi } from "../lib/api";
+import { generateWhatsAppBillLink } from "../utils/whatsapp";
 import { getImageUrl } from "../utils/image";
 
-type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes";
+type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes" | "whatsapp";
 
 const statusColors: Record<OrderStatus, { dot: string; text: string; bg: string; border: string }> = {
   Pending: { dot: "bg-alert-red", text: "text-primary-navy", bg: "bg-[#F3F4F6]", border: "border-border" },
@@ -330,6 +332,7 @@ export default function AdminDashboard() {
     { id: "orders" as View, icon: "🛒", label: "Live Orders" },
     { id: "menu" as View, icon: "📋", label: "Menu Management" },
     { id: "qr-codes" as View, icon: "🔳", label: "Table QR Codes" },
+    { id: "whatsapp" as View, icon: "📱", label: "WhatsApp" },
   ];
 
   const renderSidebar = () => (
@@ -941,6 +944,17 @@ export default function AdminDashboard() {
                                           >
                                             RECEIPT
                                           </button>
+                                          {order.customerPhone && (
+                                            <button
+                                              onClick={() => {
+                                                const waLink = generateWhatsAppBillLink(order as any);
+                                                window.open(waLink, "_blank");
+                                              }}
+                                              className="bg-leaf/10 text-leaf border border-leaf/20 hover:bg-leaf hover:text-white transition-all rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                            >
+                                              <span>📱</span> WA Bill
+                                            </button>
+                                          )}
                                         </div>
                                       ) : null}
                                     </div>
@@ -1204,6 +1218,12 @@ export default function AdminDashboard() {
               <div className="card-premium p-10">
                 <QRCodesPanel />
               </div>
+            </div>
+          )}
+
+          {view === "whatsapp" && (
+            <div className="max-w-2xl mx-auto h-full">
+              <WhatsAppLinkPanel />
             </div>
           )}
          </div>
