@@ -200,17 +200,34 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
 // ==========================================
 export const updateOrderStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { status } = req.body;
-    const validStatuses = ["Pending", "Preparing", "Ready", "Completed", "Cancelled"];
+    const { status, tableNumber } = req.body;
+    const updateData: any = {};
 
-    if (!validStatuses.includes(status)) {
-      res.status(400).json({ success: false, error: "Invalid order status" });
+    if (status !== undefined) {
+      const validStatuses = ["Pending", "Preparing", "Ready", "Completed", "Cancelled"];
+      if (!validStatuses.includes(status)) {
+        res.status(400).json({ success: false, error: "Invalid order status" });
+        return;
+      }
+      updateData.status = status;
+    }
+
+    if (tableNumber !== undefined) {
+      if (tableNumber !== null && (typeof tableNumber !== "number" || tableNumber <= 0 || tableNumber > 50)) {
+        res.status(400).json({ success: false, error: "Invalid table number" });
+        return;
+      }
+      updateData.tableNumber = tableNumber;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ success: false, error: "No fields to update" });
       return;
     }
 
     const order = await Order.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updateData,
       { new: true, runValidators: true },
     ).populate("items.menuItem", "name price category image");
 
@@ -224,20 +241,24 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     io.to("admin-dashboard").emit("orderStatusUpdate", {
       orderId: order._id,
       status: order.status,
+      tableNumber: order.tableNumber,
     });
     io.to(`order-${order._id}`).emit("orderStatusUpdate", {
       orderId: order._id,
       status: order.status,
+      tableNumber: order.tableNumber,
     });
 
     if (order.deviceId) {
       io.to(order.deviceId).emit("orderStatusUpdate", {
         orderId: order._id,
         status: order.status,
+        tableNumber: order.tableNumber,
       });
-      if (order.status === "Ready") {
+      if (status === "Ready" && order.status === "Ready") {
         io.to(order.deviceId).emit("orderReady", order);
       }
+    }
     
     // Automated WhatsApp Billing
     if (status === "Completed" && order.customerPhone) {
@@ -252,7 +273,6 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
           console.error("Failed to send automated WhatsApp bill:", err);
         }
       })();
-    }
     }
 
     const response: ApiResponse<OrderType> = {

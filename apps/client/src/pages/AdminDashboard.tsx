@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import dayjs from "dayjs";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useOrders, useUpdateOrderStatus, useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useAnalytics } from "../hooks/useApi";
+import { useOrders, useUpdateOrderStatus, useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useAnalytics, useCreateOrder } from "../hooks/useApi";
 import { socket, connectSocket, joinAdminRoom } from "../lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import type { OrderStatus, MenuItem, MenuCategory } from "@the-blue-cup/types";
@@ -12,7 +12,7 @@ import { menuApi } from "../lib/api";
 import { generateWhatsAppBillLink } from "../utils/whatsapp";
 import { getImageUrl } from "../utils/image";
 
-type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes" | "whatsapp";
+type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes" | "whatsapp" | "pos";
 
 const statusColors: Record<OrderStatus, { dot: string; text: string; bg: string; border: string }> = {
   Pending: { dot: "bg-alert-red", text: "text-primary-navy", bg: "bg-[#F3F4F6]", border: "border-border" },
@@ -83,10 +83,87 @@ export default function AdminDashboard() {
   const [timeframe, setTimeframe] = useState("today"); // today, monthly, all
   const [notification, setNotification] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   const [waiterRequests, setWaiterRequests] = useState<{ id: string; table: number; time: Date }[]>([]);
 
+  // POS State
+  const [posCart, setPosCart] = useState<{ menuItem: MenuItem; quantity: number; customization: string }[]>([]);
+  const [posCustomerName, setPosCustomerName] = useState("");
+  const [posCustomerPhone, setPosCustomerPhone] = useState("");
+  const [posSpecialInstructions, setPosSpecialInstructions] = useState("");
+  const [posTableNumber, setPosTableNumber] = useState<number | null>(null);
+  const [posCategory, setPosCategory] = useState("All");
+  const [posSearch, setPosSearch] = useState("");
+  const createOrder = useCreateOrder();
+
+  const addToPosCart = (item: MenuItem) => {
+    setPosCart(prev => {
+      const existing = prev.find(i => i.menuItem._id === item._id);
+      if (existing) {
+        return prev.map(i => i.menuItem._id === item._id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      return [...prev, { menuItem: item, quantity: 1, customization: "" }];
+    });
+  };
+
+  const updatePosCartQuantity = (id: string, qty: number) => {
+    if (qty <= 0) {
+      setPosCart(prev => prev.filter(i => i.menuItem._id !== id));
+    } else {
+      setPosCart(prev => prev.map(i => i.menuItem._id === id ? { ...i, quantity: qty } : i));
+    }
+  };
+
+  const updatePosCartCustomization = (id: string, custom: string) => {
+    setPosCart(prev => prev.map(i => i.menuItem._id === id ? { ...i, customization: custom } : i));
+  };
+
+  const posSubtotal = useMemo(() => {
+    return posCart.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
+  }, [posCart]);
+  
+  const posTax = posSubtotal * 0.05;
+  const posTotal = posSubtotal + posTax;
+
+  const handlePlacePosOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (posCart.length === 0) {
+      alert("Cart is empty. Please add items to place an order.");
+      return;
+    }
+    if (posCustomerPhone && !/^\d{10}$/.test(posCustomerPhone)) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    createOrder.mutate({
+      tableNumber: posTableNumber,
+      items: posCart.map(i => ({
+        menuItem: i.menuItem._id!,
+        quantity: i.quantity,
+        customization: i.customization || undefined
+      })),
+      customerName: posCustomerName || "Walk-in Guest",
+      customerPhone: posCustomerPhone || undefined,
+      specialInstructions: posSpecialInstructions || undefined
+    }, {
+      onSuccess: () => {
+        setNotification("🛒 Walk-in order placed successfully!");
+        playSound("order");
+        setPosCart([]);
+        setPosCustomerName("");
+        setPosCustomerPhone("");
+        setPosSpecialInstructions("");
+        setPosTableNumber(null);
+        setView("orders"); // Switch to Live Orders view
+        setTimeout(() => setNotification(null), 5000);
+      },
+      onError: (err: any) => {
+        alert("Failed to place order: " + (err.message || "Unknown error"));
+      }
+    });
+  };
   // Menu Modal State
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<MenuItem> | null>(null);
@@ -111,6 +188,15 @@ export default function AdminDashboard() {
       return matchSearch && matchFilter;
     });
   }, [menuItems, menuSearch, menuFilter]);
+
+  const posFilteredMenuItems = useMemo(() => {
+    return menuItems.filter(item => {
+      const matchSearch = item.name.toLowerCase().includes(posSearch.toLowerCase()) || 
+                          (item.description?.toLowerCase() || "").includes(posSearch.toLowerCase());
+      const matchCategory = posCategory === "All" || item.category === posCategory;
+      return matchSearch && matchCategory;
+    });
+  }, [menuItems, posSearch, posCategory]);
 
   const navigate = useNavigate();
 
@@ -167,12 +253,18 @@ export default function AdminDashboard() {
       setTimeout(() => setNotification(null), 5000);
     };
 
-    const handleUpdate = (data: { orderId: string; status: OrderStatus }) => {
+    const handleUpdate = (data: { orderId: string; status?: OrderStatus; tableNumber?: number | null }) => {
       qc.setQueryData(["orders", undefined, undefined, timeframe], (old: any) => {
         if (!Array.isArray(old)) return old;
-        return old.map((o: any) =>
-          o._id === data.orderId ? { ...o, status: data.status } : o
-        );
+        return old.map((o: any) => {
+          if (o._id === data.orderId) {
+            const updated = { ...o };
+            if (data.status !== undefined) updated.status = data.status;
+            if (data.tableNumber !== undefined) updated.tableNumber = data.tableNumber;
+            return updated;
+          }
+          return o;
+        });
       });
     };
     const handleWaiter = (table: number) => {
@@ -330,6 +422,7 @@ export default function AdminDashboard() {
   const navItems = [
     { id: "dashboard" as View, icon: "📊", label: "Analytics & Trends" },
     { id: "orders" as View, icon: "🛒", label: "Live Orders" },
+    { id: "pos" as View, icon: "🖥️", label: "Walk-in POS" },
     { id: "menu" as View, icon: "📋", label: "Menu Management" },
     { id: "qr-codes" as View, icon: "🔳", label: "Table QR Codes" },
     { id: "whatsapp" as View, icon: "📱", label: "WhatsApp" },
@@ -883,9 +976,23 @@ export default function AdminDashboard() {
 
                                   <div className="pl-2 mb-6">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-heading text-2xl text-primary-navy font-black leading-none tracking-tight">
-                                        {order.tableNumber ? `Table ${order.tableNumber}` : "Artisan Takeaway"}
-                                      </h4>
+                                      <div className="relative flex items-center bg-transparent group/table">
+                                        <select
+                                          value={order.tableNumber === null || order.tableNumber === undefined ? "" : order.tableNumber}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            const newTable = val === "" ? null : Number(val);
+                                            updateStatus.mutate({ id: order._id!, tableNumber: newTable });
+                                          }}
+                                          className="font-heading text-2xl text-primary-navy font-black leading-none tracking-tight bg-transparent border-b border-dashed border-primary-navy/30 focus:outline-none focus:border-accent-gold cursor-pointer pr-4 appearance-none"
+                                        >
+                                          <option value="">Counter / Takeaway</option>
+                                          {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
+                                            <option key={num} value={num}>Table {num}</option>
+                                          ))}
+                                        </select>
+                                        <span className="text-[10px] text-muted ml-0.5 group-hover/table:text-accent-gold transition-colors pointer-events-none">▼</span>
+                                      </div>
                                       {order.customerName && order.customerName !== "Guest" && (
                                         <span className="text-[10px] font-black text-accent-gold uppercase tracking-widest bg-accent-gold/5 px-2 py-0.5 rounded-md border border-accent-gold/10">
                                           {order.customerName}
@@ -979,6 +1086,293 @@ export default function AdminDashboard() {
             </>
           )}
 
+          {/* ─── Walk-in POS View ─── */}
+          {view === "pos" && (
+            <div className="flex flex-col xl:flex-row gap-8 items-start w-full">
+              {/* Left Column: Menu Selector */}
+              <div className="flex-1 w-full xl:max-w-[65%] flex flex-col gap-6">
+                <div>
+                  <h1 className="font-heading text-4xl md:text-5xl text-primary-navy font-black tracking-tight mb-2">Walk-in POS</h1>
+                  <p className="text-muted font-medium">Create direct orders and checkout for walk-in counter guests.</p>
+                </div>
+
+                {/* Search & Category Filter */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <input 
+                      type="text" 
+                      placeholder="Search menu items..." 
+                      className="input-premium pl-12 w-full bg-white shadow-soft"
+                      style={{ paddingLeft: '3rem' }}
+                      value={posSearch}
+                      onChange={(e) => setPosSearch(e.target.value)}
+                    />
+                    <svg className="w-5 h-5 text-muted absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  
+                  <div className="relative shrink-0 sm:w-64">
+                    <select 
+                      className="input-premium bg-white appearance-none cursor-pointer w-full pr-10 shadow-soft"
+                      value={posCategory}
+                      onChange={(e) => setPosCategory(e.target.value)}
+                    >
+                      <option value="All">All Categories</option>
+                      {Array.from(new Set(menuItems.map((i) => i.category))).map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted">▼</div>
+                  </div>
+                </div>
+
+                {/* Menu items grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 overflow-y-auto max-h-[650px] pr-2 scrollbar-hide">
+                  {posFilteredMenuItems.map((item) => {
+                    const isSelected = posCart.some(i => i.menuItem._id === item._id);
+                    return (
+                      <motion.div 
+                        key={item._id}
+                        whileHover={{ y: -4, scale: 1.02 }}
+                        className={`card-premium p-5 flex flex-col justify-between relative group overflow-hidden border cursor-pointer select-none transition-all duration-300 ${
+                          isSelected ? 'border-accent-gold bg-accent-gold/[0.02]' : 'border-border/60 hover:border-accent-gold/40'
+                        }`}
+                        onClick={() => item.isAvailable && addToPosCart(item)}
+                      >
+                        {!item.isAvailable && (
+                          <div className="absolute inset-0 bg-white/85 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                            <span className="bg-alert-red/10 border border-alert-red/20 text-alert-red text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl shadow-soft">
+                              Sold Out
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex gap-4 items-start mb-4">
+                          <img 
+                            src={getImageUrl(item.image) || `https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=80&h=80&fit=crop`} 
+                            alt={item.name} 
+                            className="w-16 h-16 rounded-2xl object-cover ring-2 ring-cream-dark shadow-soft group-hover:scale-105 transition-transform shrink-0" 
+                          />
+                          <div className="min-w-0">
+                            <span className="text-[9px] font-black text-accent-gold uppercase tracking-widest">{item.category}</span>
+                            <h4 className="text-sm font-black text-primary-navy truncate mt-0.5 leading-tight mb-1">{item.name}</h4>
+                            <p className="text-[10px] text-muted line-clamp-2 leading-tight font-medium">{item.description}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-border/40">
+                          <span className="font-heading text-lg text-primary-navy font-black">₹{item.price.toFixed(0)}</span>
+                          <button 
+                            disabled={!item.isAvailable}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (item.isAvailable) addToPosCart(item);
+                            }}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shadow-soft transition-all duration-300 ${
+                              isSelected 
+                                ? 'bg-accent-gold text-white hover:bg-accent-gold/90' 
+                                : 'bg-primary-navy text-white hover:bg-primary-navy/90 hover:scale-105 active:scale-95'
+                            }`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  {posFilteredMenuItems.length === 0 && (
+                    <div className="col-span-full py-20 text-center border-4 border-dashed border-border/40 rounded-[3rem] bg-antique-cream/20">
+                      <span className="text-4xl block mb-4">🔍</span>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted">No items matched your search</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Order Summary */}
+              <div className="w-full xl:max-w-[35%] xl:sticky xl:top-[88px] flex flex-col gap-6">
+                <form onSubmit={handlePlacePosOrder} className="card-premium p-6 sm:p-8 flex flex-col gap-6 border-2 border-primary-navy/10 shadow-premium">
+                  <div>
+                    <h3 className="font-heading text-2xl text-primary-navy font-black tracking-tight uppercase">Current Order</h3>
+                    <p className="text-[10px] font-black text-muted uppercase tracking-widest mt-1">Direct billing detail</p>
+                  </div>
+
+                  {/* Cart Items List */}
+                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide border-b border-border/40 pb-5">
+                    <AnimatePresence mode="popLayout">
+                      {posCart.map((item) => (
+                        <motion.div 
+                          key={item.menuItem._id}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="flex flex-col gap-2 p-3 bg-cream-dark/25 rounded-2xl border border-border/40 hover:border-accent-gold/30 transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <h5 className="text-xs font-black text-primary-navy truncate leading-tight">{item.menuItem.name}</h5>
+                              <span className="text-[10px] font-black text-accent-gold">₹{item.menuItem.price.toFixed(0)} each</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 bg-white border border-border/60 rounded-xl p-1 shadow-inner">
+                              <button 
+                                type="button"
+                                onClick={() => updatePosCartQuantity(item.menuItem._id!, item.quantity - 1)}
+                                className="w-6 h-6 flex items-center justify-center text-primary-navy hover:bg-cream-dark rounded-md text-xs font-bold"
+                              >
+                                −
+                              </button>
+                              <span className="w-5 text-center text-xs font-black text-primary-navy">{item.quantity}</span>
+                              <button 
+                                type="button"
+                                onClick={() => updatePosCartQuantity(item.menuItem._id!, item.quantity + 1)}
+                                className="w-6 h-6 flex items-center justify-center text-primary-navy hover:bg-cream-dark rounded-md text-xs font-bold"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 items-center">
+                            <input 
+                              type="text" 
+                              placeholder="Notes: sugar free, extra ice..." 
+                              value={item.customization}
+                              onChange={(e) => updatePosCartCustomization(item.menuItem._id!, e.target.value)}
+                              className="w-full bg-white/70 border border-border/40 rounded-lg px-2.5 py-1 text-[10px] focus:outline-none focus:border-accent-gold"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => updatePosCartQuantity(item.menuItem._id!, 0)}
+                              className="text-alert-red hover:text-alert-red/80 text-[10px] font-black uppercase tracking-widest px-1 shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    {posCart.length === 0 && (
+                      <div className="py-12 text-center text-muted">
+                        <span className="text-3xl block mb-2 opacity-30">🛒</span>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Cart is empty</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Customer Details Form */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1.5 px-1">Customer Profile (Optional)</label>
+                      <input 
+                        type="text" 
+                        placeholder="Guest Name (e.g. John Doe)" 
+                        value={posCustomerName}
+                        onChange={(e) => setPosCustomerName(e.target.value)}
+                        className="input-premium text-xs bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1.5 px-1">WhatsApp Mobile (Optional)</label>
+                      <div className="relative">
+                        <input 
+                          type="tel" 
+                          placeholder="10-digit mobile" 
+                          value={posCustomerPhone}
+                          onChange={(e) => setPosCustomerPhone(e.target.value)}
+                          className="input-premium text-xs pl-14 bg-white"
+                          style={{ paddingLeft: '4.5rem' }}
+                        />
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 border-r border-border pr-3">
+                          <span className="text-[10px] font-black text-muted">🇮🇳</span>
+                          <span className="text-xs font-bold text-primary-navy">+91</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1.5 px-1">Service Target</label>
+                        <select 
+                          value={posTableNumber === null ? "" : posTableNumber}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPosTableNumber(val === "" ? null : Number(val));
+                          }}
+                          className="input-premium text-xs bg-white"
+                        >
+                          <option value="">Takeaway / Counter</option>
+                          {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
+                            <option key={num} value={num}>Table {num}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1.5 px-1">Instructions</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Extra hot" 
+                          value={posSpecialInstructions}
+                          onChange={(e) => setPosSpecialInstructions(e.target.value)}
+                          className="input-premium text-xs bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Calculations & Submit */}
+                  <div className="bg-antique-cream/40 border border-border/50 rounded-2xl p-5 flex flex-col gap-3 shadow-inner">
+                    <div className="flex justify-between text-[11px] font-black text-muted uppercase tracking-wider">
+                      <span>Subtotal</span>
+                      <span className="text-primary-navy">₹{posSubtotal.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] font-black text-muted uppercase tracking-wider border-b border-border/30 pb-3">
+                      <span>Service & Tax (5%)</span>
+                      <span className="text-primary-navy">₹{posTax.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between items-end pt-1">
+                      <div>
+                        <span className="text-[9px] font-black text-muted uppercase tracking-widest block mb-0.5">Total Valuation</span>
+                        <span className="font-heading text-3xl text-primary-navy font-black tracking-tighter leading-none">
+                          ₹{posTotal.toFixed(0)}
+                        </span>
+                      </div>
+                      {posTableNumber ? (
+                        <div className="text-right">
+                          <span className="text-[9px] font-black text-muted uppercase tracking-widest block mb-0.5">Serving Room</span>
+                          <span className="font-heading text-xl text-accent-gold font-black leading-none">
+                            Table {posTableNumber}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-right">
+                          <span className="text-[9px] font-black text-muted uppercase tracking-widest block mb-0.5">Serving Room</span>
+                          <span className="font-heading text-xl text-accent-gold font-black leading-none">
+                            Counter
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={posCart.length === 0 || createOrder.isPending}
+                    className="btn-primary w-full py-4 text-xs uppercase tracking-widest font-black shadow-premium flex items-center justify-center gap-2"
+                  >
+                    {createOrder.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Place Order & Generate Bill"
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* ─── Menu Management View ─── */}
           {view === "menu" && (
             <>
@@ -1000,6 +1394,7 @@ export default function AdminDashboard() {
                     type="text" 
                     placeholder="Search menu items..." 
                     className="input-premium pl-12 w-full"
+                    style={{ paddingLeft: '3rem' }}
                     value={menuSearch}
                     onChange={(e) => setMenuSearch(e.target.value)}
                   />
@@ -1007,14 +1402,17 @@ export default function AdminDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <select 
-                  className="input-premium md:w-64 appearance-none cursor-pointer w-full"
-                  value={menuFilter}
-                  onChange={(e) => setMenuFilter(e.target.value)}
-                >
-                  <option>All Categories</option>
-                  {Array.from(new Set(menuItems.map((i) => i.category))).map((c) => <option key={c}>{c}</option>)}
-                </select>
+                <div className="relative shrink-0 md:w-64 w-full">
+                  <select 
+                    className="input-premium appearance-none cursor-pointer w-full pr-10"
+                    value={menuFilter}
+                    onChange={(e) => setMenuFilter(e.target.value)}
+                  >
+                    <option>All Categories</option>
+                    {Array.from(new Set(menuItems.map((i) => i.category))).map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted">▼</div>
+                </div>
               </div>
 
               {/* Mobile Card View */}

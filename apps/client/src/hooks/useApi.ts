@@ -100,8 +100,8 @@ export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      orderApi.updateStatus(id, status),
+    mutationFn: ({ id, status, tableNumber }: { id: string; status?: string; tableNumber?: number | null }) =>
+      orderApi.updateStatus(id, status, tableNumber),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },

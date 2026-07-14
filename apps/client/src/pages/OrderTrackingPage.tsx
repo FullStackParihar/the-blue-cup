@@ -22,7 +22,7 @@ export default function OrderTrackingPage() {
   const { data: orders = [], isLoading } = useOrders(undefined, deviceId || undefined);
   const queryClient = useQueryClient();
   const [toast, setToast] = useState<{ message: string; type: string } | null>(null);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
   // Play status update sound
   const playSound = (status: string) => {

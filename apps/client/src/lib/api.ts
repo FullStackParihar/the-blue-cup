@@ -95,10 +95,10 @@ export const orderApi = {
       body: JSON.stringify(payload),
     }),
 
-  updateStatus: (id: string, status: string) =>
+  updateStatus: (id: string, status?: string, tableNumber?: number | null) =>
     apiFetch<Order>(`/orders/${id}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, tableNumber }),
     }),
 };
 
