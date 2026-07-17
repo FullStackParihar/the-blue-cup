@@ -27,8 +27,8 @@ export default function CartPage() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const subtotal = getTotalAmount();
-  const tax = subtotal * 0.05; // 5% tax
-  const total = subtotal + tax;
+  const tax = 0;
+  const total = subtotal;
 
   const handleCheckout = () => {
     if (customerPhone && !/^\d{10}$/.test(customerPhone)) {
@@ -218,10 +218,6 @@ export default function CartPage() {
             <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
               <span className="text-muted">Subtotal</span>
               <span className="text-primary-navy">₹{subtotal.toFixed(0)}</span>
-            </div>
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-              <span className="text-muted">Service & Tax (5%)</span>
-              <span className="text-primary-navy">₹{tax.toFixed(0)}</span>
             </div>
           </div>
           <div className="flex justify-between items-end">

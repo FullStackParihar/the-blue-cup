@@ -5,14 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useOrders, useUpdateOrderStatus, useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useAnalytics, useCreateOrder } from "../hooks/useApi";
 import { socket, connectSocket, joinAdminRoom } from "../lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
-import type { OrderStatus, MenuItem, MenuCategory } from "@the-blue-cup/types";
+import type { OrderStatus, MenuItem, MenuCategory, Order } from "@the-blue-cup/types";
 import QRCodesPanel from "../components/admin/QRCodesPanel";
 import WhatsAppLinkPanel from "../components/admin/WhatsAppLinkPanel";
+import InventoryPanel from "../components/admin/InventoryPanel";
 import { menuApi } from "../lib/api";
 import { generateWhatsAppBillLink } from "../utils/whatsapp";
 import { getImageUrl } from "../utils/image";
+import { generateInvoice, generateDailyReport } from "../utils/pdf";
 
-type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes" | "whatsapp" | "pos";
+type View = "dashboard" | "orders" | "menu" | "analytics" | "qr-codes" | "whatsapp" | "pos" | "inventory";
 
 const statusColors: Record<OrderStatus, { dot: string; text: string; bg: string; border: string }> = {
   Pending: { dot: "bg-alert-red", text: "text-primary-navy", bg: "bg-[#F3F4F6]", border: "border-border" },
@@ -87,6 +89,16 @@ export default function AdminDashboard() {
 
   const [waiterRequests, setWaiterRequests] = useState<{ id: string; table: number; time: Date }[]>([]);
 
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [editCart, setEditCart] = useState<Array<{
+    menuItem: string;
+    name: string;
+    price: number;
+    quantity: number;
+    customization?: string;
+  }>>([]);
+  const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>("");
+
   // POS State
   const [posCart, setPosCart] = useState<{ menuItem: MenuItem; quantity: number; customization: string }[]>([]);
   const [posCustomerName, setPosCustomerName] = useState("");
@@ -123,8 +135,8 @@ export default function AdminDashboard() {
     return posCart.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
   }, [posCart]);
   
-  const posTax = posSubtotal * 0.05;
-  const posTotal = posSubtotal + posTax;
+  const posTax = 0;
+  const posTotal = posSubtotal;
 
   const handlePlacePosOrder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,15 +265,13 @@ export default function AdminDashboard() {
       setTimeout(() => setNotification(null), 5000);
     };
 
-    const handleUpdate = (data: { orderId: string; status?: OrderStatus; tableNumber?: number | null }) => {
+    const handleUpdate = (data: any) => {
+      const orderId = data.orderId || data._id;
       qc.setQueryData(["orders", undefined, undefined, timeframe], (old: any) => {
         if (!Array.isArray(old)) return old;
         return old.map((o: any) => {
-          if (o._id === data.orderId) {
-            const updated = { ...o };
-            if (data.status !== undefined) updated.status = data.status;
-            if (data.tableNumber !== undefined) updated.tableNumber = data.tableNumber;
-            return updated;
+          if (o._id === orderId) {
+            return { ...o, ...data };
           }
           return o;
         });
@@ -424,6 +434,7 @@ export default function AdminDashboard() {
     { id: "orders" as View, icon: "🛒", label: "Live Orders" },
     { id: "pos" as View, icon: "🖥️", label: "Walk-in POS" },
     { id: "menu" as View, icon: "📋", label: "Menu Management" },
+    { id: "inventory" as View, icon: "📦", label: "Inventory" },
     { id: "qr-codes" as View, icon: "🔳", label: "Table QR Codes" },
     { id: "whatsapp" as View, icon: "📱", label: "WhatsApp" },
   ];
@@ -593,7 +604,7 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <button
-                        onClick={() => import("../utils/pdf").then(({ generateDailyReport }) => generateDailyReport(dailyReportOrders as any))}
+                        onClick={() => generateDailyReport(dailyReportOrders as any)}
                         className="btn-primary py-3 px-6 shadow-premium text-[10px] uppercase tracking-widest"
                       >
                         Download PDF
@@ -961,7 +972,37 @@ export default function AdminDashboard() {
                                   <div className="flex justify-between items-start mb-5 pl-2">
                                     <div>
                                       <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1">Order Identifier</p>
-                                      <p className="text-xs font-black text-primary-navy">#ORD-{order._id?.slice(-6).toUpperCase()}</p>
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-black text-primary-navy">#ORD-{order._id?.slice(-6).toUpperCase()}</p>
+                                        {order.status !== "Completed" && order.status !== "Cancelled" && (
+                                          <button
+                                            onClick={() => {
+                                              setEditingOrder(order);
+                                              setEditCart(order.items.map(item => {
+                                                const menuItemId = typeof item.menuItem === "object" && item.menuItem !== null
+                                                  ? (item.menuItem as any)._id
+                                                  : String(item.menuItem);
+                                                const name = typeof item.menuItem === "object" && item.menuItem !== null
+                                                  ? (item.menuItem as any).name
+                                                  : "Unknown Item";
+                                                const price = item.priceAtOrder || (typeof item.menuItem === "object" && item.menuItem !== null ? (item.menuItem as any).price : 0);
+                                                return {
+                                                  menuItem: menuItemId,
+                                                  name,
+                                                  price,
+                                                  quantity: item.quantity,
+                                                  customization: item.customization || ""
+                                                };
+                                              }));
+                                              setSelectedItemToAdd("");
+                                            }}
+                                            className="text-[10px] text-accent-gold hover:text-accent-gold-dark font-bold uppercase tracking-wider flex items-center gap-0.5 bg-accent-gold/10 hover:bg-accent-gold/25 px-2 py-1 rounded-md transition-all active:scale-95 duration-200"
+                                            title="Edit Ordered Items"
+                                          >
+                                            ✏️ Edit
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="flex flex-col items-end">
                                       <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1 text-right">Elapsed</p>
@@ -1046,7 +1087,7 @@ export default function AdminDashboard() {
                                       ) : order.status === "Completed" ? (
                                         <div className="flex gap-2">
                                           <button
-                                            onClick={() => import("../utils/pdf").then(({ generateInvoice }) => generateInvoice(order as any))}
+                                            onClick={() => generateInvoice(order as any)}
                                             className="btn-secondary !py-3 !px-5 text-[9px]"
                                           >
                                             RECEIPT
@@ -1321,13 +1362,9 @@ export default function AdminDashboard() {
 
                   {/* Calculations & Submit */}
                   <div className="bg-antique-cream/40 border border-border/50 rounded-2xl p-5 flex flex-col gap-3 shadow-inner">
-                    <div className="flex justify-between text-[11px] font-black text-muted uppercase tracking-wider">
+                    <div className="flex justify-between text-[11px] font-black text-muted uppercase tracking-wider border-b border-border/30 pb-3">
                       <span>Subtotal</span>
                       <span className="text-primary-navy">₹{posSubtotal.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[11px] font-black text-muted uppercase tracking-wider border-b border-border/30 pb-3">
-                      <span>Service & Tax (5%)</span>
-                      <span className="text-primary-navy">₹{posTax.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between items-end pt-1">
                       <div>
@@ -1624,6 +1661,12 @@ export default function AdminDashboard() {
               <WhatsAppLinkPanel />
             </div>
           )}
+
+          {view === "inventory" && (
+            <div className="w-full h-full">
+              <InventoryPanel />
+            </div>
+          )}
          </div>
       </main>
 
@@ -1708,6 +1751,188 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {editingOrder && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => { setEditingOrder(null); setEditCart([]); }}>
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-antique-cream rounded-[2.5rem] shadow-premium p-10 border border-white max-h-[85vh] flex flex-col">
+
+              <div className="flex justify-between items-center mb-6 shrink-0">
+                <div>
+                  <h2 className="font-heading text-2xl text-primary-navy font-black tracking-tight">Edit Ordered Items</h2>
+                  <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.3em] mt-1">Order #ORD-{editingOrder._id?.slice(-6).toUpperCase()}</p>
+                </div>
+                <button onClick={() => { setEditingOrder(null); setEditCart([]); }} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-muted hover:text-primary-navy transition-all">✕</button>
+              </div>
+
+              {/* Items List (Scrollable) */}
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-1 max-h-[40vh] scrollbar-thin">
+                {editCart.map((item, idx) => (
+                  <div key={idx} className="flex flex-col gap-3 p-4 bg-white border border-border/60 rounded-[1.5rem] shadow-soft relative overflow-hidden group">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-xs font-bold text-primary-navy block">{item.name}</span>
+                        <span className="text-[10px] font-black text-muted uppercase tracking-wider block mt-0.5">₹{item.price} per unit</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={item.quantity <= 1}
+                          onClick={() => {
+                            setEditCart(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity - 1 } : it));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-cream-dark/50 border border-border flex items-center justify-center text-primary-navy font-black hover:bg-accent-gold/20 disabled:opacity-50 transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="text-xs font-black text-primary-navy">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditCart(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-cream-dark/50 border border-border flex items-center justify-center text-primary-navy font-black hover:bg-accent-gold/20 transition-colors"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditCart(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-alert-red/10 border border-alert-red/20 flex items-center justify-center text-alert-red font-bold hover:bg-alert-red hover:text-white transition-all ml-2"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Add customization details (e.g. no ice, extra sugar)..."
+                        value={item.customization || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditCart(prev => prev.map((it, i) => i === idx ? { ...it, customization: val } : it));
+                        }}
+                        className="w-full text-[10px] px-3 py-2 border border-border rounded-xl focus:outline-none focus:border-accent-gold bg-white/70"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {editCart.length === 0 && (
+                  <p className="text-center text-xs text-muted py-6">No items in the order. Please add at least one item.</p>
+                )}
+              </div>
+
+              {/* Add New Item */}
+              <div className="mt-4 pt-4 border-t border-border/40 shrink-0">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">Add Item to Order</label>
+                <select
+                  value={selectedItemToAdd}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedItemToAdd(val);
+                    if (!val) return;
+                    const found = menuItems.find(m => m._id === val);
+                    if (found) {
+                      const exists = editCart.find(it => it.menuItem === found._id);
+                      if (exists) {
+                        setEditCart(prev => prev.map(it => it.menuItem === found._id ? { ...it, quantity: it.quantity + 1 } : it));
+                      } else {
+                        setEditCart(prev => [...prev, {
+                          menuItem: found._id!,
+                          name: found.name,
+                          price: found.price,
+                          quantity: 1,
+                          customization: ""
+                        }]);
+                      }
+                    }
+                    setSelectedItemToAdd("");
+                  }}
+                  className="input-premium bg-white text-xs w-full"
+                >
+                  <option value="">Select an item to add...</option>
+                  {menuItems
+                    .filter(m => m.isAvailable)
+                    .map(m => (
+                      <option key={m._id} value={m._id}>
+                        {m.name} (₹{m.price})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {(() => {
+                const subtotal = editCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                const tax = 0;
+                const total = subtotal;
+                return (
+                  <div className="bg-antique-cream/40 border border-border/40 rounded-2xl p-4 space-y-2 mt-6 shrink-0">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Subtotal</span>
+                      <span className="font-bold text-primary-navy">₹{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-border/40 font-heading">
+                      <span className="font-black text-primary-navy uppercase tracking-wider">Total amount</span>
+                      <span className="font-black text-accent-gold text-lg">₹{total.toFixed(0)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Save & Cancel */}
+              <div className="pt-6 flex gap-4 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingOrder(null);
+                    setEditCart([]);
+                  }}
+                  className="flex-1 btn-secondary py-4 text-xs uppercase tracking-widest font-black"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={editCart.length === 0 || updateStatus.isPending}
+                  onClick={() => {
+                    if (!editingOrder) return;
+                    updateStatus.mutate(
+                      {
+                        id: editingOrder._id!,
+                        items: editCart.map(({ menuItem, quantity, customization }) => ({
+                          menuItem,
+                          quantity,
+                          customization
+                        }))
+                      },
+                      {
+                        onSuccess: () => {
+                          setEditingOrder(null);
+                          setEditCart([]);
+                        }
+                      }
+                    );
+                  }}
+                  className="flex-1 btn-primary py-4 text-xs uppercase tracking-widest font-black shadow-premium flex items-center justify-center gap-2"
+                >
+                  {updateStatus.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}

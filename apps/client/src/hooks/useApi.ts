@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { menuApi, orderApi, analyticsApi } from "../lib/api";
-import type { CreateOrderPayload, MenuItem } from "@the-blue-cup/types";
+import { menuApi, orderApi, analyticsApi, inventoryApi } from "../lib/api";
+import type { CreateOrderPayload, MenuItem, InventoryItem, InventoryTransaction, Recipe } from "@the-blue-cup/types";
 
 // ==========================================
 // Menu Hooks
@@ -100,8 +100,8 @@ export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status, tableNumber }: { id: string; status?: string; tableNumber?: number | null }) =>
-      orderApi.updateStatus(id, status, tableNumber),
+    mutationFn: ({ id, status, tableNumber, items }: { id: string; status?: string; tableNumber?: number | null; items?: any[] }) =>
+      orderApi.updateStatus(id, status, tableNumber, items),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
@@ -117,6 +117,94 @@ export const useAnalytics = (period: string = "weekly") => {
     queryFn: async () => {
       const res = await analyticsApi.get(period);
       return res.data;
+    },
+  });
+};
+
+// ==========================================
+// Inventory Hooks
+// ==========================================
+export const useInventoryItems = () => {
+  return useQuery({
+    queryKey: ["inventory"],
+    queryFn: async () => {
+      const res = await inventoryApi.getAll();
+      return res.data ?? [];
+    },
+  });
+};
+
+export const useCreateInventoryItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Omit<InventoryItem, "_id">) => inventoryApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    },
+  });
+};
+
+export const useUpdateInventoryItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<InventoryItem> }) =>
+      inventoryApi.update(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    },
+  });
+};
+
+export const useDeleteInventoryItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => inventoryApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+};
+
+export const useAdjustInventoryStock = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { type: string; quantity: number; note?: string } }) =>
+      inventoryApi.adjustStock(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventoryTransactions"] });
+    },
+  });
+};
+
+export const useInventoryTransactions = () => {
+  return useQuery({
+    queryKey: ["inventoryTransactions"],
+    queryFn: async () => {
+      const res = await inventoryApi.getTransactions();
+      return res.data ?? [];
+    },
+  });
+};
+
+export const useRecipes = () => {
+  return useQuery({
+    queryKey: ["recipes"],
+    queryFn: async () => {
+      const res = await inventoryApi.getRecipes();
+      return res.data ?? [];
+    },
+  });
+};
+
+export const useUpdateRecipe = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { menuItemId: string; ingredients: { inventoryItem: string; quantity: number }[] }) =>
+      inventoryApi.updateRecipe(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
     },
   });
 };

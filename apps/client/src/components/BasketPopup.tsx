@@ -28,8 +28,8 @@ export default function BasketPopup({ isOpen, onClose, onCheckout }: Props) {
   const setSpecialInstructions = useCartStore((s) => s.setSpecialInstructions);
 
   const subtotal = useCartStore((s) => s.getTotalAmount());
-  const tax = subtotal * 0.05;
-  const total = subtotal + tax;
+  const tax = 0;
+  const total = subtotal;
 
   return (
     <AnimatePresence>
@@ -135,13 +135,9 @@ export default function BasketPopup({ isOpen, onClose, onCheckout }: Props) {
                   
                   {/* Order Summary */}
                   <div className="bg-antique-cream/60 p-6 rounded-[2rem] border border-border/50 shadow-soft">
-                    <div className="flex justify-between text-[10px] font-black text-muted uppercase tracking-widest mb-3">
+                    <div className="flex justify-between text-[10px] font-black text-muted uppercase tracking-widest mb-4 pb-4 border-b border-border/40">
                       <span>Subtotal</span>
                       <span className="numeric-text text-primary-navy">₹{subtotal.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-black text-muted uppercase tracking-widest mb-4 pb-4 border-b border-border/40">
-                      <span>Tax & Service (5%)</span>
-                      <span className="numeric-text text-primary-navy">₹{tax.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between items-end">
                       <span className="text-xs font-black text-primary-navy uppercase tracking-[0.2em]">Total Value</span>

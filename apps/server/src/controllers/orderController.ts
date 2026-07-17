@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Order, MenuItem } from "../models";
+import { Order, MenuItem, Recipe, InventoryItem, InventoryTransaction } from "../models";
 import type { ApiResponse, Order as OrderType } from "@the-blue-cup/types";
 import { Server as SocketIOServer } from "socket.io";
 import { whatsappService } from "../services/whatsappService";
@@ -154,8 +154,8 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       });
     }
 
-    const tax = subtotal * 0.05; // 5% tax
-    const totalAmount = subtotal + tax;
+    const tax = 0; // No tax
+    const totalAmount = subtotal;
 
     // 3. CREATE ORDER
     const order = await Order.create({
@@ -200,7 +200,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
 // ==========================================
 export const updateOrderStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { status, tableNumber } = req.body;
+    const { status, tableNumber, items } = req.body;
     const updateData: any = {};
 
     if (status !== undefined) {
@@ -218,6 +218,35 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
         return;
       }
       updateData.tableNumber = tableNumber;
+    }
+
+    if (items !== undefined) {
+      if (!Array.isArray(items) || items.length === 0) {
+        res.status(400).json({ success: false, error: "Order must contain at least one item" });
+        return;
+      }
+
+      let subtotal = 0;
+      const itemsWithPrices = [];
+      for (const item of items) {
+        const menuItemDoc = await MenuItem.findById(item.menuItem);
+        if (!menuItemDoc) {
+          res.status(400).json({ success: false, error: `Menu item not found: ${item.menuItem}` });
+          return;
+        }
+        subtotal += menuItemDoc.price * item.quantity;
+        itemsWithPrices.push({
+          menuItem: menuItemDoc._id,
+          quantity: item.quantity,
+          customization: item.customization || "",
+          priceAtOrder: menuItemDoc.price
+        });
+      }
+
+      updateData.items = itemsWithPrices;
+      updateData.subtotal = subtotal;
+      updateData.tax = 0;
+      updateData.totalAmount = subtotal;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -238,28 +267,28 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
 
     // Emit real-time status update
     const io: SocketIOServer = req.app.get("io");
-    io.to("admin-dashboard").emit("orderStatusUpdate", {
+    const socketPayload = {
       orderId: order._id,
       status: order.status,
       tableNumber: order.tableNumber,
-    });
-    io.to(`order-${order._id}`).emit("orderStatusUpdate", {
-      orderId: order._id,
-      status: order.status,
-      tableNumber: order.tableNumber,
-    });
+      items: order.items,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      totalAmount: order.totalAmount,
+    };
+
+    io.to("admin-dashboard").emit("orderStatusUpdate", socketPayload);
+    io.to(`order-${order._id}`).emit("orderStatusUpdate", socketPayload);
 
     if (order.deviceId) {
-      io.to(order.deviceId).emit("orderStatusUpdate", {
-        orderId: order._id,
-        status: order.status,
-        tableNumber: order.tableNumber,
-      });
+      io.to(order.deviceId).emit("orderStatusUpdate", socketPayload);
       if (status === "Ready" && order.status === "Ready") {
         io.to(order.deviceId).emit("orderReady", order);
       }
     }
     
+
+
     // Automated WhatsApp Billing
     if (status === "Completed" && order.customerPhone) {
       (async () => {

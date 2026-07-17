@@ -1,4 +1,4 @@
-import type { ApiResponse, MenuItem, Order, CreateOrderPayload } from "@the-blue-cup/types";
+import type { ApiResponse, MenuItem, Order, CreateOrderPayload, InventoryItem, InventoryTransaction, Recipe } from "@the-blue-cup/types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
@@ -95,10 +95,10 @@ export const orderApi = {
       body: JSON.stringify(payload),
     }),
 
-  updateStatus: (id: string, status?: string, tableNumber?: number | null) =>
+  updateStatus: (id: string, status?: string, tableNumber?: number | null, items?: any[]) =>
     apiFetch<Order>(`/orders/${id}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ status, tableNumber }),
+      body: JSON.stringify({ status, tableNumber, items }),
     }),
 };
 
@@ -124,4 +124,37 @@ export const authApi = {
 // ==========================================
 export const analyticsApi = {
   get: (period: string = "weekly") => apiFetch<any>(`/analytics?period=${period}`),
+};
+
+// ==========================================
+// Inventory API
+// ==========================================
+export const inventoryApi = {
+  getAll: () => apiFetch<InventoryItem[]>("/inventory"),
+  create: (payload: Omit<InventoryItem, "_id">) =>
+    apiFetch<InventoryItem>("/inventory", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  update: (id: string, payload: Partial<InventoryItem>) =>
+    apiFetch<InventoryItem>(`/inventory/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  delete: (id: string) =>
+    apiFetch<{ success: boolean }>(`/inventory/${id}`, {
+      method: "DELETE",
+    }),
+  adjustStock: (id: string, payload: { type: string; quantity: number; note?: string }) =>
+    apiFetch<{ item: InventoryItem; transaction: any }>(`/inventory/${id}/adjust`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getTransactions: () => apiFetch<InventoryTransaction[]>("/inventory/transactions"),
+  getRecipes: () => apiFetch<Recipe[]>("/inventory/recipes"),
+  updateRecipe: (payload: { menuItemId: string; ingredients: { inventoryItem: string; quantity: number }[] }) =>
+    apiFetch<Recipe>("/inventory/recipes", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };

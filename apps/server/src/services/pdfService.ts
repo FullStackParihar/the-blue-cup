@@ -48,11 +48,10 @@ export const generateBillPdf = (order: Order): Buffer => {
 
   doc.setFontSize(10);
   doc.text(`Subtotal: INR ${order.subtotal.toFixed(0)}`, 140, finalY + 10);
-  doc.text(`Tax (5%): INR ${order.tax.toFixed(0)}`, 140, finalY + 16);
   
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text(`Grand Total: INR ${order.totalAmount.toFixed(0)}`, 140, finalY + 24);
+  doc.text(`Grand Total: INR ${order.totalAmount.toFixed(0)}`, 140, finalY + 18);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);

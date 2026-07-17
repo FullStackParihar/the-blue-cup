@@ -7,3 +7,4 @@ export * from "./order";
 export * from "./user";
 export * from "./socket";
 export * from "./api";
+export * from "./inventory";

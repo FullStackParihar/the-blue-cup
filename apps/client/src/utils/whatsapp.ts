@@ -25,7 +25,6 @@ export const generateWhatsAppBillLink = (order: Order): string => {
     `Table: ${order.tableNumber || "Takeaway"}\n\n` +
     `*Items:*\n${itemsList}\n` +
     `*Subtotal:* ₹${order.subtotal.toFixed(0)}\n` +
-    `*Tax (5%):* ₹${order.tax.toFixed(0)}\n` +
     `--------------------------\n` +
     `*TOTAL: ₹${order.totalAmount.toFixed(0)}*\n` +
     `--------------------------\n\n` +

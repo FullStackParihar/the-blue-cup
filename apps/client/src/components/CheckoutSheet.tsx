@@ -41,8 +41,8 @@ export default function CheckoutSheet({ isOpen, onClose }: Props) {
   const navigate = useNavigate();
 
   const subtotal = useCartStore((s) => s.getTotalAmount());
-  const tax = subtotal * 0.05;
-  const total = subtotal + tax;
+  const tax = 0;
+  const total = subtotal;
 
   const handleAuth = async () => {
     setAuthError(null);

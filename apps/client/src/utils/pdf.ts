@@ -39,8 +39,8 @@ export const generateInvoice = (order: Order) => {
     ];
   });
 
-  const subtotal = order.totalAmount / 1.05; // 5% tax reverse calculation
-  const tax = order.totalAmount - subtotal;
+  const subtotal = order.subtotal || order.totalAmount;
+  const tax = 0;
 
   autoTable(doc, {
     startY: 65,
@@ -55,17 +55,22 @@ export const generateInvoice = (order: Order) => {
 
   doc.setFontSize(10);
   doc.text(`Subtotal: INR ${subtotal.toFixed(2)}`, 140, finalY + 10);
-  doc.text(`Tax (5%): INR ${tax.toFixed(2)}`, 140, finalY + 16);
   
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text(`Grand Total: INR ${order.totalAmount.toFixed(2)}`, 140, finalY + 24);
+  doc.text(`Grand Total: INR ${order.totalAmount.toFixed(2)}`, 140, finalY + 18);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text("Thank you for visiting The Blue Cup Cafe!", 105, finalY + 40, { align: "center" });
 
+  try {
+    const blobUrl = doc.output("bloburl");
+    window.open(blobUrl, "_blank");
+  } catch (error) {
+    console.error("Failed to open receipt preview:", error);
+  }
   doc.save(`Invoice_ORD_${orderId}.pdf`);
 };
 
@@ -161,5 +166,11 @@ export const generateDailyReport = (orders: Order[], reportDate = new Date()) =>
     styles: { fontSize: 9, cellPadding: 3 },
   });
 
+  try {
+    const blobUrl = doc.output("bloburl");
+    window.open(blobUrl, "_blank");
+  } catch (error) {
+    console.error("Failed to open daily report preview:", error);
+  }
   doc.save(`Daily_Report_${reportDate.toISOString().slice(0, 10)}.pdf`);
 };
