@@ -5,7 +5,7 @@ import BrandCoverLogo from "../components/decorations/BrandCoverLogo";
 const categories = [
   { id: "Coffee", name: "Artisan Coffee", desc: "Hand-poured perfection from single-origin beans", icon: "☕", img: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&h=600&fit=crop" },
   { id: "Tea", name: "Premium Teas", desc: "Organic blends sourced from the finest gardens", icon: "🫖", img: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&h=600&fit=crop" },
-  { id: "Pastry", name: "Fresh Pastries", desc: "Baked fresh every morning by our in-house chef", icon: "🥐", img: "https://images.unsplash.com/photo-1555507036-ab1f4038024a?w=800&h=600&fit=crop" },
+  { id: "Pasta", name: "White Sauce Pasta", desc: "Creamy and cheesy alfredo-style pasta with Italian herbs", icon: "🍝", img: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=800&h=600&fit=crop" },
   { id: "Sandwich", name: "Gourmet Bites", desc: "Savory delights crafted with local ingredients", icon: "🥪", img: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&h=600&fit=crop" },
 ];
 
