@@ -171,7 +171,40 @@ export const useAdjustInventoryStock = () => {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: { type: string; quantity: number; note?: string } }) =>
       inventoryApi.adjustStock(id, payload),
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["inventory"] });
+
+      // Snapshot the previous value
+      const previousInventory = queryClient.getQueryData<InventoryItem[]>(["inventory"]);
+
+      // Optimistically update to the new value
+      if (previousInventory) {
+        queryClient.setQueryData<InventoryItem[]>(
+          ["inventory"],
+          previousInventory.map((item) => {
+            if (item._id === id) {
+              return {
+                ...item,
+                currentStock: Math.max(0, item.currentStock + payload.quantity),
+              };
+            }
+            return item;
+          })
+        );
+      }
+
+      // Return context with snapshotted value
+      return { previousInventory };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback to previous state on failure
+      if (context?.previousInventory) {
+        queryClient.setQueryData(["inventory"], context.previousInventory);
+      }
+    },
+    onSettled: () => {
+      // Always refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryTransactions"] });
     },
@@ -205,6 +238,49 @@ export const useUpdateRecipe = () => {
       inventoryApi.updateRecipe(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+};
+
+export const useRenameInventoryCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ oldCategory, newCategory }: { oldCategory: string; newCategory: string }) =>
+      inventoryApi.renameCategory(oldCategory, newCategory),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    },
+  });
+};
+
+export const useDeleteInventoryCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (category: string) => inventoryApi.deleteCategory(category),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+};
+
+export const useRenameMenuCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ oldCategory, newCategory }: { oldCategory: string; newCategory: string }) =>
+      menuApi.renameCategory(oldCategory, newCategory),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu"] });
+    },
+  });
+};
+
+export const useDeleteMenuCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (category: string) => menuApi.deleteCategory(category),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu"] });
     },
   });
 };

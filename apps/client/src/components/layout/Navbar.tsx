@@ -77,20 +77,17 @@ export default function Navbar() {
 
           {/* Actions */}
           <div className="flex items-center gap-1.5 sm:gap-4 z-50 shrink-0">
-            {/* Table Number Selector */}
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-cream-dark border border-border rounded-xl px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-soft hover:border-accent-gold/40 transition-colors">
-              <span className="hidden min-[430px]:inline text-primary-navy text-[9px] font-black uppercase tracking-widest opacity-60">Table</span>
-              <select
-                value={tableNumber ?? ""}
-                onChange={(e) => setTableNumber(e.target.value ? Number(e.target.value) : null)}
-                className="bg-transparent text-primary-navy numeric-text text-sm focus:outline-none cursor-pointer w-9 sm:w-auto"
-              >
-                <option value="">--</option>
-                {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
+            {/* Table Number Display */}
+            {tableNumber ? (
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-cream-dark border border-border rounded-xl px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-soft">
+                <span className="text-primary-navy text-[9px] font-black uppercase tracking-widest opacity-60">Table</span>
+                <span className="text-primary-navy numeric-text text-sm font-black">{tableNumber}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-cream-dark border border-border rounded-xl px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-soft">
+                <span className="text-primary-navy text-[9px] font-black uppercase tracking-widest opacity-60">Takeaway</span>
+              </div>
+            )}
 
             {/* Cart Icon */}
             <Link to="/menu" className="relative w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center bg-primary-navy text-antique-cream rounded-xl hover:bg-navy-dark transition-all shadow-premium group">

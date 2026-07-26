@@ -40,7 +40,7 @@ const OrderSchema = new Schema<OrderDoc>(
       type: Number,
       default: null,
       min: [1, "Table number must be at least 1"],
-      max: [50, "Table number cannot exceed 50"],
+      max: [11, "Table number cannot exceed 11"],
     },
     items: [
       {

@@ -100,7 +100,7 @@ export const getOrder = async (req: Request, res: Response): Promise<void> => {
 import { z } from "zod";
 
 const createOrderSchema = z.object({
-  tableNumber: z.number().int().positive().max(50).nullable(),
+  tableNumber: z.number().int().positive().max(11).nullable(),
   items: z.array(z.object({
     menuItem: z.string(),
     quantity: z.number().int().positive(),
@@ -213,7 +213,7 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     }
 
     if (tableNumber !== undefined) {
-      if (tableNumber !== null && (typeof tableNumber !== "number" || tableNumber <= 0 || tableNumber > 50)) {
+      if (tableNumber !== null && (typeof tableNumber !== "number" || tableNumber <= 0 || tableNumber > 11)) {
         res.status(400).json({ success: false, error: "Invalid table number" });
         return;
       }

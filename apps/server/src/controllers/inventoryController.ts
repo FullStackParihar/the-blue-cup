@@ -235,3 +235,52 @@ export const updateRecipe = async (req: Request, res: Response, next: NextFuncti
     next(err);
   }
 };
+
+// ==========================================
+// Category Management Endpoints
+// ==========================================
+
+export const renameCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { oldCategory, newCategory } = req.body;
+    if (!oldCategory || !newCategory) {
+      res.status(400).json({ success: false, message: "oldCategory and newCategory are required" });
+      return;
+    }
+    await InventoryItem.updateMany(
+      { category: oldCategory },
+      { category: newCategory }
+    );
+    res.json({ success: true, message: `Category renamed from ${oldCategory} to ${newCategory}` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { category } = req.body;
+    if (!category) {
+      res.status(400).json({ success: false, message: "Category is required" });
+      return;
+    }
+    
+    // Find all item IDs in this category to clean up recipes & transactions
+    const items = await InventoryItem.find({ category });
+    const itemIds = items.map(item => item._id);
+
+    // Delete items
+    await InventoryItem.deleteMany({ category });
+    
+    // Clean up transactions and recipes
+    await InventoryTransaction.deleteMany({ inventoryItem: { $in: itemIds } });
+    await Recipe.updateMany(
+      {},
+      { $pull: { ingredients: { inventoryItem: { $in: itemIds } } } }
+    );
+
+    res.json({ success: true, message: `Category ${category} and all its items deleted successfully` });
+  } catch (err) {
+    next(err);
+  }
+};

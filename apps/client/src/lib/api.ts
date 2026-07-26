@@ -71,7 +71,19 @@ export const menuApi = {
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
     });
-  }
+  },
+
+  renameCategory: (oldCategory: string, newCategory: string) =>
+    apiFetch<{ success: boolean }>("/menu/category/rename", {
+      method: "PUT",
+      body: JSON.stringify({ oldCategory, newCategory }),
+    }),
+
+  deleteCategory: (category: string) =>
+    apiFetch<{ success: boolean }>("/menu/category/delete", {
+      method: "POST",
+      body: JSON.stringify({ category }),
+    }),
 };
 
 // ==========================================
@@ -149,6 +161,16 @@ export const inventoryApi = {
     apiFetch<{ item: InventoryItem; transaction: any }>(`/inventory/${id}/adjust`, {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+  renameCategory: (oldCategory: string, newCategory: string) =>
+    apiFetch<{ success: boolean }>("/inventory/category/rename", {
+      method: "PUT",
+      body: JSON.stringify({ oldCategory, newCategory }),
+    }),
+  deleteCategory: (category: string) =>
+    apiFetch<{ success: boolean }>("/inventory/category/delete", {
+      method: "POST",
+      body: JSON.stringify({ category }),
     }),
   getTransactions: () => apiFetch<InventoryTransaction[]>("/inventory/transactions"),
   getRecipes: () => apiFetch<Recipe[]>("/inventory/recipes"),

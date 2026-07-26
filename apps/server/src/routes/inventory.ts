@@ -7,7 +7,9 @@ import {
   adjustStock,
   getTransactions,
   getRecipes,
-  updateRecipe
+  updateRecipe,
+  renameCategory,
+  deleteCategory
 } from "../controllers/inventoryController";
 import { protect, adminOnly } from "../middleware/authMiddleware";
 
@@ -16,6 +18,10 @@ const router = Router();
 // Apply auth middleware globally to all inventory endpoints
 router.use(protect);
 router.use(adminOnly);
+
+// Category Management
+router.put("/category/rename", renameCategory);
+router.post("/category/delete", deleteCategory);
 
 // Inventory CRUD & Stock adjustment
 router.get("/", getInventory);

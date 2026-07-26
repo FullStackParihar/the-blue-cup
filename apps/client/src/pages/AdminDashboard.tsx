@@ -2,10 +2,11 @@ import { useEffect, useState, useMemo } from "react";
 import dayjs from "dayjs";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useOrders, useUpdateOrderStatus, useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useAnalytics, useCreateOrder } from "../hooks/useApi";
+import { useOrders, useUpdateOrderStatus, useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useAnalytics, useCreateOrder, useRenameMenuCategory, useDeleteMenuCategory } from "../hooks/useApi";
 import { socket, connectSocket, joinAdminRoom } from "../lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import type { OrderStatus, MenuItem, MenuCategory, Order } from "@the-blue-cup/types";
+import { MENU_CATEGORIES } from "@the-blue-cup/types";
 import QRCodesPanel from "../components/admin/QRCodesPanel";
 import WhatsAppLinkPanel from "../components/admin/WhatsAppLinkPanel";
 import InventoryPanel from "../components/admin/InventoryPanel";
@@ -98,6 +99,15 @@ export default function AdminDashboard() {
     customization?: string;
   }>>([]);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>("");
+  const [itemSearchQuery, setItemSearchQuery] = useState<string>("");
+  const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
+
+  const closeEditOrderModal = () => {
+    setEditingOrder(null);
+    setEditCart([]);
+    setIsAddDropdownOpen(false);
+    setItemSearchQuery("");
+  };
 
   // POS State
   const [posCart, setPosCart] = useState<{ menuItem: MenuItem; quantity: number; customization: string }[]>([]);
@@ -186,10 +196,88 @@ export default function AdminDashboard() {
   const [menuSearch, setMenuSearch] = useState("");
   const [menuFilter, setMenuFilter] = useState("All Categories");
 
+  // Menu Category Actions State
+  const [menuCategoryToRename, setMenuCategoryToRename] = useState<string | null>(null);
+  const [menuRenameInputValue, setMenuRenameInputValue] = useState("");
+  const [menuCategoryToDelete, setMenuCategoryToDelete] = useState<string | null>(null);
+  const [menuItemToDelete, setMenuItemToDelete] = useState<MenuItem | null>(null);
+
+  const [menuDropdownCategory, setMenuDropdownCategory] = useState("");
+  const [menuCustomCategory, setMenuCustomCategory] = useState("");
+
+  const renameMenuCategoryMutation = useRenameMenuCategory();
+  const deleteMenuCategoryMutation = useDeleteMenuCategory();
+
+  const confirmRenameMenuCategory = () => {
+    if (!menuCategoryToRename) return;
+    const trimmed = menuRenameInputValue.trim();
+    if (!trimmed || trimmed === menuCategoryToRename) {
+      setMenuCategoryToRename(null);
+      return;
+    }
+    renameMenuCategoryMutation.mutate(
+      { oldCategory: menuCategoryToRename, newCategory: trimmed },
+      {
+        onSuccess: () => {
+          setMenuFilter(trimmed);
+          setMenuCategoryToRename(null);
+        }
+      }
+    );
+  };
+
+  const confirmDeleteMenuCategory = () => {
+    if (!menuCategoryToDelete) return;
+    deleteMenuCategoryMutation.mutate(menuCategoryToDelete, {
+      onSuccess: () => {
+        setMenuFilter("All Categories");
+        setMenuCategoryToDelete(null);
+      }
+    });
+  };
+
+  const confirmDeleteMenuItem = () => {
+    if (!menuItemToDelete) return;
+    deleteMenu.mutate(menuItemToDelete._id!, {
+      onSuccess: () => {
+        setMenuItemToDelete(null);
+      }
+    });
+  };
+
+  const handleEditItemClick = (item: any) => {
+    setEditingItem(item);
+    setMenuDropdownCategory(item.category || "");
+    setMenuCustomCategory("");
+    setIsMenuModalOpen(true);
+  };
+
+  const handleCreateItemClick = () => {
+    setEditingItem({});
+    setMenuDropdownCategory("");
+    setMenuCustomCategory("");
+    setIsMenuModalOpen(true);
+  };
+
+  const { data: menuItems = [] } = useMenuItems();
+
+  const allMenuDropdownCategories = useMemo(() => {
+    const fromItems = menuItems.map(item => item.category);
+    const combined = Array.from(new Set([...fromItems, ...MENU_CATEGORIES])).filter(Boolean);
+    return combined;
+  }, [menuItems]);
+
   const { data: orders = [], isLoading, error: ordersError } = useOrders(undefined, undefined, timeframe);
   const { data: dailyReportOrders = [] } = useOrders(undefined, undefined, "today");
-  const { data: menuItems = [] } = useMenuItems();
   const { data: analyticsData } = useAnalytics(period);
+
+  // Filter menu items for editing order dropdown
+  const filteredItemsForEdit = menuItems.filter(
+    m =>
+      m.isAvailable &&
+      (m.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+        m.category.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+  );
 
   // Filtered Menu Items
   const filteredMenuItems = useMemo(() => {
@@ -387,7 +475,8 @@ export default function AdminDashboard() {
 
   const handleSaveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem?.name || !editingItem?.price || !editingItem?.category) return;
+    const finalCategory = menuDropdownCategory === "custom" ? menuCustomCategory.trim() : menuDropdownCategory;
+    if (!editingItem?.name || !editingItem?.price || !finalCategory) return;
 
     let imageUrl = editingItem.image || "";
 
@@ -408,6 +497,7 @@ export default function AdminDashboard() {
 
     const payload = {
       ...editingItem,
+      category: finalCategory,
       image: imageUrl,
       price: Number(editingItem.price)
     };
@@ -1028,7 +1118,7 @@ export default function AdminDashboard() {
                                           className="font-heading text-2xl text-primary-navy font-black leading-none tracking-tight bg-transparent border-b border-dashed border-primary-navy/30 focus:outline-none focus:border-accent-gold cursor-pointer pr-4 appearance-none"
                                         >
                                           <option value="">Counter / Takeaway</option>
-                                          {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
+                                          {Array.from({ length: 11 }, (_, i) => i + 1).map(num => (
                                             <option key={num} value={num}>Table {num}</option>
                                           ))}
                                         </select>
@@ -1342,7 +1432,7 @@ export default function AdminDashboard() {
                           className="input-premium text-xs bg-white"
                         >
                           <option value="">Takeaway / Counter</option>
-                          {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
+                          {Array.from({ length: 11 }, (_, i) => i + 1).map(num => (
                             <option key={num} value={num}>Table {num}</option>
                           ))}
                         </select>
@@ -1418,14 +1508,14 @@ export default function AdminDashboard() {
                   <h1 className="font-heading text-4xl md:text-5xl text-primary-navy font-black tracking-tight mb-2">Menu Repository</h1>
                   <p className="text-muted font-medium">Add, update, or curate the cafe offerings.</p>
                 </div>
-                <button onClick={() => { setEditingItem({}); setIsMenuModalOpen(true); }}
+                <button onClick={handleCreateItemClick}
                   className="btn-primary py-4 px-8 shadow-premium">
                   <span className="text-xl leading-none font-light">+</span> Add New Master Item
                 </button>
               </div>
 
               {/* Search + Filter */}
-              <div className="flex flex-col md:flex-row gap-4 mb-10">
+              <div className="flex flex-col gap-6 mb-10">
                 <div className="relative flex-1">
                   <input 
                     type="text" 
@@ -1439,16 +1529,65 @@ export default function AdminDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <div className="relative shrink-0 md:w-64 w-full">
-                  <select 
-                    className="input-premium appearance-none cursor-pointer w-full pr-10"
-                    value={menuFilter}
-                    onChange={(e) => setMenuFilter(e.target.value)}
-                  >
-                    <option>All Categories</option>
-                    {Array.from(new Set(menuItems.map((i) => i.category))).map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted">▼</div>
+
+                {/* Dynamic Category Chips with actions */}
+                <div className="flex flex-wrap items-center gap-4 pb-1">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMenuFilter("All Categories")}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border ${
+                        menuFilter === "All Categories"
+                          ? "bg-primary-navy text-white border-primary-navy shadow-sm"
+                          : "bg-antique-cream/35 text-primary-navy border-border/60 hover:bg-antique-cream/60"
+                      }`}
+                    >
+                      All Categories
+                    </button>
+                    {Array.from(new Set(menuItems.map((i) => i.category))).map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setMenuFilter(c)}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border ${
+                          menuFilter === c
+                            ? "bg-primary-navy text-white border-primary-navy shadow-sm"
+                            : "bg-antique-cream/35 text-primary-navy border-border/60 hover:bg-antique-cream/60"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+
+                  {menuFilter !== "All Categories" && (
+                    <div className="flex items-center gap-1.5 ml-auto pl-2 py-1">
+                      <span className="text-[9px] font-black text-muted uppercase tracking-widest mr-1">
+                        Category Actions:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuRenameInputValue(menuFilter);
+                          setMenuCategoryToRename(menuFilter);
+                        }}
+                        className="px-3 py-1.5 border border-border/80 text-primary-navy hover:bg-antique-cream rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
+                        title={`Rename category "${menuFilter}"`}
+                      >
+                        ✏️ Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuCategoryToDelete(menuFilter);
+                        }}
+                        className="px-3 py-1.5 border border-alert-red/30 text-alert-red hover:bg-red-50 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
+                        title={`Delete category "${menuFilter}"`}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1480,8 +1619,8 @@ export default function AdminDashboard() {
                         </button>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => { setEditingItem(item); setIsMenuModalOpen(true); }} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-primary-navy shadow-soft">✏️</button>
-                        <button onClick={() => handleDeleteMenu(item._id!)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-alert-red shadow-soft">🗑</button>
+                        <button onClick={() => handleEditItemClick(item)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-primary-navy shadow-soft">✏️</button>
+                        <button onClick={() => setMenuItemToDelete(item)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-alert-red shadow-soft">🗑</button>
                       </div>
                     </div>
                   </div>
@@ -1529,8 +1668,8 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-8 py-6">
                             <div className="flex gap-2 transition-all">
-                              <button onClick={() => { setEditingItem(item); setIsMenuModalOpen(true); }} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-primary-navy hover:shadow-soft hover:border-accent-gold transition-all">✏️</button>
-                              <button onClick={() => handleDeleteMenu(item._id!)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-alert-red hover:shadow-soft hover:border-alert-red/30 transition-all">🗑</button>
+                              <button onClick={() => handleEditItemClick(item)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-primary-navy hover:shadow-soft hover:border-accent-gold transition-all">✏️</button>
+                              <button onClick={() => setMenuItemToDelete(item)} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-alert-red hover:shadow-soft hover:border-alert-red/30 transition-all">🗑</button>
                             </div>
                           </td>
                         </tr>
@@ -1693,18 +1832,36 @@ export default function AdminDashboard() {
                       className="input-premium" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">Taxonomy</label>
-                    <select required value={editingItem?.category || ""} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value as MenuCategory })}
-                      className="input-premium bg-white">
+                    <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">Category</label>
+                    <select 
+                      required 
+                      value={menuDropdownCategory} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setMenuDropdownCategory(val);
+                        if (val !== "custom") {
+                          setMenuCustomCategory("");
+                        }
+                      }}
+                      className="input-premium bg-white"
+                    >
                       <option value="">Choose...</option>
-                      {[
-                        "Tea", "Coffee", "Ice Tea", "Mocktails", "Shakes", 
-                        "Breads", "Burger", "Pav & Fries", "Sandwich", 
-                        "Pasta", "Pizza", "Cafe Special", "Momo", "Maggi", 
-                        "Rolls", "Dessert", "Pastry", "Beverage", "Frappes", 
-                        "Hot Chocolate", "OTC"
-                      ].map(c => <option key={c} value={c}>{c}</option>)}
+                      {allMenuDropdownCategories.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="custom">Custom Category...</option>
                     </select>
+
+                    {menuDropdownCategory === "custom" && (
+                      <input
+                        type="text"
+                        required
+                        value={menuCustomCategory}
+                        onChange={(e) => setMenuCustomCategory(e.target.value)}
+                        placeholder="Enter custom category..."
+                        className="w-full mt-2 bg-white border border-border/60 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-gold transition-all"
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">Price Point (₹)</label>
@@ -1756,16 +1913,15 @@ export default function AdminDashboard() {
         )}
 
         {editingOrder && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => { setEditingOrder(null); setEditCart([]); }}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={closeEditOrderModal}>
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-antique-cream rounded-[2.5rem] shadow-premium p-10 border border-white max-h-[85vh] flex flex-col">
-
               <div className="flex justify-between items-center mb-6 shrink-0">
                 <div>
                   <h2 className="font-heading text-2xl text-primary-navy font-black tracking-tight">Edit Ordered Items</h2>
                   <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.3em] mt-1">Order #ORD-{editingOrder._id?.slice(-6).toUpperCase()}</p>
                 </div>
-                <button onClick={() => { setEditingOrder(null); setEditCart([]); }} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-muted hover:text-primary-navy transition-all">✕</button>
+                <button onClick={closeEditOrderModal} className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-muted hover:text-primary-navy transition-all">✕</button>
               </div>
 
               {/* Items List (Scrollable) */}
@@ -1830,42 +1986,91 @@ export default function AdminDashboard() {
               </div>
 
               {/* Add New Item */}
-              <div className="mt-4 pt-4 border-t border-border/40 shrink-0">
-                <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 px-1">Add Item to Order</label>
-                <select
-                  value={selectedItemToAdd}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedItemToAdd(val);
-                    if (!val) return;
-                    const found = menuItems.find(m => m._id === val);
-                    if (found) {
-                      const exists = editCart.find(it => it.menuItem === found._id);
-                      if (exists) {
-                        setEditCart(prev => prev.map(it => it.menuItem === found._id ? { ...it, quantity: it.quantity + 1 } : it));
-                      } else {
-                        setEditCart(prev => [...prev, {
-                          menuItem: found._id!,
-                          name: found.name,
-                          price: found.price,
-                          quantity: 1,
-                          customization: ""
-                        }]);
-                      }
-                    }
-                    setSelectedItemToAdd("");
-                  }}
-                  className="input-premium bg-white text-xs w-full"
-                >
-                  <option value="">Select an item to add...</option>
-                  {menuItems
-                    .filter(m => m.isAvailable)
-                    .map(m => (
-                      <option key={m._id} value={m._id}>
-                        {m.name} (₹{m.price})
-                      </option>
-                    ))}
-                </select>
+              <div className="mt-4 pt-4 border-t border-border/40 shrink-0 space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest px-1">Add Item to Order</label>
+                <div className="relative w-full">
+                  {/* Trigger Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
+                    className="input-premium bg-white text-xs w-full flex justify-between items-center px-4 py-3"
+                  >
+                    <span className="text-muted/80">Select an item to add...</span>
+                    <span className="text-[10px] text-muted">▼</span>
+                  </button>
+
+                  {/* Dropdown Box */}
+                  <AnimatePresence>
+                    {isAddDropdownOpen && (
+                      <>
+                        {/* Click backdrop to close */}
+                        <div 
+                          className="fixed inset-0 z-[110]" 
+                          onClick={() => {
+                            setIsAddDropdownOpen(false);
+                            setItemSearchQuery("");
+                          }} 
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          className="absolute left-0 right-0 mt-1 bg-white border border-border/80 rounded-2xl shadow-xl z-[120] max-h-64 flex flex-col overflow-hidden"
+                        >
+                          {/* Search Input inside the dropdown */}
+                          <div className="p-2 border-b border-border/40 bg-[#FAF9F5] shrink-0">
+                            <input
+                              type="text"
+                              required
+                              placeholder="Type to search..."
+                              value={itemSearchQuery}
+                              onChange={(e) => setItemSearchQuery(e.target.value)}
+                              className="w-full bg-white border border-border/60 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-gold transition-all"
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+
+                          {/* List of Options */}
+                          <div className="overflow-y-auto flex-1 py-1 max-h-48 custom-scrollbar">
+                            {filteredItemsForEdit.length === 0 ? (
+                              <div className="px-4 py-3 text-xs text-muted/70 italic text-center">
+                                No matching items found
+                              </div>
+                            ) : (
+                              filteredItemsForEdit.map((m) => (
+                                <button
+                                  key={m._id}
+                                  type="button"
+                                  onClick={() => {
+                                    const exists = editCart.find(it => it.menuItem === m._id);
+                                    if (exists) {
+                                      setEditCart(prev => prev.map(it => it.menuItem === m._id ? { ...it, quantity: it.quantity + 1 } : it));
+                                    } else {
+                                      setEditCart(prev => [...prev, {
+                                        menuItem: m._id!,
+                                        name: m.name,
+                                        price: m.price,
+                                        quantity: 1,
+                                        customization: ""
+                                      }]);
+                                    }
+                                    setIsAddDropdownOpen(false);
+                                    setItemSearchQuery("");
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 hover:bg-antique-cream/35 text-xs text-primary-navy font-semibold transition-all border-b border-border/10 last:border-b-0 flex items-center justify-between"
+                                >
+                                  <span>[{m.category}] {m.name}</span>
+                                  <span className="text-[10px] text-accent-gold font-bold font-heading">₹{m.price}</span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               {(() => {
@@ -1886,14 +2091,11 @@ export default function AdminDashboard() {
                 );
               })()}
 
-              {/* Save & Cancel */}
+               {/* Save & Cancel */}
               <div className="pt-6 flex gap-4 shrink-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingOrder(null);
-                    setEditCart([]);
-                  }}
+                  onClick={closeEditOrderModal}
                   className="flex-1 btn-secondary py-4 text-xs uppercase tracking-widest font-black"
                 >
                   Cancel
@@ -1913,10 +2115,7 @@ export default function AdminDashboard() {
                         }))
                       },
                       {
-                        onSuccess: () => {
-                          setEditingOrder(null);
-                          setEditCart([]);
-                        }
+                        onSuccess: closeEditOrderModal
                       }
                     );
                   }}
@@ -1933,6 +2132,138 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
+            </motion.div>
+          </div>
+        )}
+        {/* Custom Rename Menu Category Dialog */}
+        {menuCategoryToRename && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => setMenuCategoryToRename(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-border/40 shadow-xl space-y-6"
+            >
+              <div>
+                <h3 className="font-heading text-xl text-primary-navy font-black uppercase tracking-tight">Rename Category</h3>
+                <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em] mt-1">Update designation</p>
+              </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-muted uppercase tracking-widest block">New Name</label>
+                <input
+                  type="text"
+                  value={menuRenameInputValue}
+                  onChange={(e) => setMenuRenameInputValue(e.target.value)}
+                  className="w-full bg-[#FAF9F5] border border-border/60 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-gold transition-all"
+                  placeholder="e.g. Fresh Fruits"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmRenameMenuCategory();
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMenuCategoryToRename(null)}
+                  className="flex-1 py-3 px-4 border border-border/60 hover:bg-[#FAF9F5] rounded-xl text-xs font-semibold text-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmRenameMenuCategory}
+                  className="flex-1 py-3 px-4 bg-primary-navy hover:bg-primary-navy/95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                >
+                  Rename
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Custom Delete Menu Category Confirmation Dialog */}
+        {menuCategoryToDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => setMenuCategoryToDelete(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-border/40 shadow-xl space-y-6"
+            >
+              <div>
+                <h3 className="font-heading text-xl text-alert-red font-black uppercase tracking-tight">Delete Category</h3>
+                <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em] mt-1">Destructive Action</p>
+              </div>
+
+              <p className="text-xs font-medium text-muted/90 leading-relaxed">
+                Are you sure you want to delete the category <span className="font-bold text-primary-navy">"{menuCategoryToDelete}"</span>?
+                <br />
+                <br />
+                This will <span className="font-bold text-alert-red">delete all menu items</span> belonging to this category, and clear them from active systems.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMenuCategoryToDelete(null)}
+                  className="flex-1 py-3 px-4 border border-border/60 hover:bg-[#FAF9F5] rounded-xl text-xs font-semibold text-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteMenuCategory}
+                  className="flex-1 py-3 px-4 bg-alert-red hover:bg-alert-red/95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                >
+                  Delete All
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Custom Delete Menu Item Confirmation Dialog */}
+        {menuItemToDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => setMenuItemToDelete(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-border/40 shadow-xl space-y-6"
+            >
+              <div>
+                <h3 className="font-heading text-xl text-alert-red font-black uppercase tracking-tight">Delete Item</h3>
+                <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em] mt-1">Confirm deletion</p>
+              </div>
+
+              <p className="text-xs font-medium text-muted/90 leading-relaxed">
+                Are you sure you want to delete the item <span className="font-bold text-primary-navy">"{menuItemToDelete.name}"</span>?
+                <br />
+                This action is irreversible.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMenuItemToDelete(null)}
+                  className="flex-1 py-3 px-4 border border-border/60 hover:bg-[#FAF9F5] rounded-xl text-xs font-semibold text-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteMenuItem}
+                  className="flex-1 py-3 px-4 bg-alert-red hover:bg-alert-red/95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                >
+                  Delete
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

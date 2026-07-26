@@ -64,13 +64,7 @@ const menuItemSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   price: z.number().positive(),
-  category: z.enum([
-    "Tea", "Coffee", "Ice Tea", "Mocktails", "Shakes", 
-    "Breads", "Burger", "Pav & Fries", "Sandwich", 
-    "Pasta", "Pizza", "Cafe Special", "Momo", "Maggi", 
-    "Rolls", "Dessert", "Pastry", "Beverage", "Frappes", 
-    "Hot Chocolate", "OTC"
-  ]),
+  category: z.string().min(1),
   image: z.string().optional(),
   isAvailable: z.boolean().optional(),
 });
@@ -141,6 +135,42 @@ export const deleteMenuItem = async (req: Request, res: Response): Promise<void>
     res.json({ success: true, message: "Menu item deleted successfully" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete menu item";
+    res.status(500).json({ success: false, error: message });
+  }
+};
+
+// ==========================================
+// Category Management
+// ==========================================
+export const renameMenuCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { oldCategory, newCategory } = req.body;
+    if (!oldCategory || !newCategory) {
+      res.status(400).json({ success: false, error: "oldCategory and newCategory are required" });
+      return;
+    }
+    await MenuItem.updateMany(
+      { category: oldCategory },
+      { category: newCategory }
+    );
+    res.json({ success: true, message: `Menu category renamed from ${oldCategory} to ${newCategory}` });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to rename menu category";
+    res.status(500).json({ success: false, error: message });
+  }
+};
+
+export const deleteMenuCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { category } = req.body;
+    if (!category) {
+      res.status(400).json({ success: false, error: "Category is required" });
+      return;
+    }
+    await MenuItem.deleteMany({ category });
+    res.json({ success: true, message: `Menu category ${category} and all its items deleted successfully` });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete menu category";
     res.status(500).json({ success: false, error: message });
   }
 };

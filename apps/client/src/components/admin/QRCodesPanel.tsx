@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 export default function QRCodesPanel() {
-  const [tables, setTables] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  const [tables, setTables] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   const [newTableNum, setNewTableNum] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
 
@@ -20,7 +20,8 @@ export default function QRCodesPanel() {
       try {
         const parsed = JSON.parse(storedTables);
         if (Array.isArray(parsed) && parsed.every(item => typeof item === "number")) {
-          setTables(parsed.sort((a, b) => a - b));
+          const filtered = parsed.filter(num => num >= 1 && num <= 11).sort((a, b) => a - b);
+          setTables(filtered);
         }
       } catch (err) {
         console.error("Failed to parse stored tables:", err);
@@ -35,8 +36,8 @@ export default function QRCodesPanel() {
   const handleAddTable = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseInt(newTableNum);
-    if (isNaN(num) || num < 1 || num > 50) {
-      alert("Please enter a valid table number between 1 and 50.");
+    if (isNaN(num) || num < 1 || num > 11) {
+      alert("Please enter a valid table number between 1 and 11.");
       return;
     }
     if (tables.includes(num)) {
@@ -74,7 +75,7 @@ export default function QRCodesPanel() {
               <input
                 type="number"
                 min="1"
-                max="50"
+                max="11"
                 value={newTableNum}
                 onChange={(e) => setNewTableNum(e.target.value)}
                 placeholder="e.g. 11"
@@ -87,7 +88,7 @@ export default function QRCodesPanel() {
                 Add ＋
               </button>
             </div>
-            <p className="text-[9px] text-muted font-medium">Enter a table number between 1 and 50.</p>
+            <p className="text-[9px] text-muted font-medium">Enter a table number between 1 and 11.</p>
           </form>
 
           {/* Base URL info */}

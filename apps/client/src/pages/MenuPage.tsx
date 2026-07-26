@@ -79,7 +79,7 @@ export default function MenuPage() {
 
     if (tableParam) {
       const num = parseInt(tableParam, 10);
-      if (!isNaN(num) && num >= 1 && num <= 50) {
+      if (!isNaN(num) && num >= 1 && num <= 11) {
         if (currentTable !== null && currentTable !== num) {
           setTableUpdateMessage(`📍 Moved to Table ${num}`);
           setTimeout(() => setTableUpdateMessage(null), 3000);

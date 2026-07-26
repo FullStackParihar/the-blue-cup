@@ -5,6 +5,8 @@ import {
   useUpdateInventoryItem,
   useDeleteInventoryItem,
   useAdjustInventoryStock,
+  useRenameInventoryCategory,
+  useDeleteInventoryCategory,
 } from "../../hooks/useApi";
 import type { InventoryItem } from "@the-blue-cup/types";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,9 +39,71 @@ export default function InventoryPanel() {
   const updateItemMutation = useUpdateInventoryItem();
   const deleteItemMutation = useDeleteInventoryItem();
   const adjustStockMutation = useAdjustInventoryStock();
+  const renameCategoryMutation = useRenameInventoryCategory();
+  const deleteCategoryMutation = useDeleteInventoryCategory();
+
+  // Custom dialog states
+  const [categoryToRename, setCategoryToRename] = useState<string | null>(null);
+  const [renameInputValue, setRenameInputValue] = useState("");
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+
+  const handleRenameCategoryClick = () => {
+    if (selectedCategory === "All") return;
+    setRenameInputValue(selectedCategory);
+    setCategoryToRename(selectedCategory);
+  };
+
+  const confirmRenameCategory = () => {
+    if (!categoryToRename) return;
+    const trimmed = renameInputValue.trim();
+    if (!trimmed || trimmed === categoryToRename) {
+      setCategoryToRename(null);
+      return;
+    }
+    
+    renameCategoryMutation.mutate(
+      { oldCategory: categoryToRename, newCategory: trimmed },
+      {
+        onSuccess: () => {
+          setSelectedCategory(trimmed);
+          setCategoryToRename(null);
+        }
+      }
+    );
+  };
+
+  const handleDeleteCategoryClick = () => {
+    if (selectedCategory === "All") return;
+    setCategoryToDelete(selectedCategory);
+  };
+
+  const confirmDeleteCategory = () => {
+    if (!categoryToDelete) return;
+    deleteCategoryMutation.mutate(categoryToDelete, {
+      onSuccess: () => {
+        setSelectedCategory("All");
+        setCategoryToDelete(null);
+      }
+    });
+  };
+
+  const confirmDeleteItem = () => {
+    if (!itemToDelete?._id) return;
+    deleteItemMutation.mutate(itemToDelete._id, {
+      onSuccess: () => {
+        setItemToDelete(null);
+      }
+    });
+  };
 
   // Categories list
   const categories = ["All", ...new Set(inventory.map((item) => item.category))];
+
+  // Dynamic categories list for the dropdown select (defaults + custom ones already added)
+  const customCategories = Array.from(new Set(inventory.map((item) => item.category)))
+    .filter((cat) => cat && !DEFAULT_CATEGORIES.includes(cat));
+  const allDropdownCategories = [...DEFAULT_CATEGORIES, ...customCategories];
 
   // Stock update handler
   const handleStockUpdate = (item: InventoryItem, newQty: number) => {
@@ -153,21 +217,45 @@ export default function InventoryPanel() {
           />
         </div>
 
-        {/* Dynamic Category Chips */}
-        <div className="flex flex-wrap gap-2 pb-1 overflow-x-auto">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border ${
-                selectedCategory === cat
-                  ? "bg-primary-navy text-white border-primary-navy shadow-sm"
-                  : "bg-antique-cream/35 text-primary-navy border-border/60 hover:bg-antique-cream/60"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* Dynamic Category Chips with actions */}
+        <div className="flex flex-wrap items-center gap-4 pb-1">
+          <div className="flex flex-wrap gap-2 overflow-x-auto">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border ${
+                  selectedCategory === cat
+                    ? "bg-primary-navy text-white border-primary-navy shadow-sm"
+                    : "bg-antique-cream/35 text-primary-navy border-border/60 hover:bg-antique-cream/60"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {selectedCategory !== "All" && (
+            <div className="flex items-center gap-1.5 ml-auto pl-2 py-1">
+              <span className="text-[9px] font-black text-muted uppercase tracking-widest mr-1">
+                Category Actions:
+              </span>
+              <button
+                onClick={handleRenameCategoryClick}
+                className="px-3 py-1.5 border border-border/80 text-primary-navy hover:bg-antique-cream rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
+                title={`Rename category "${selectedCategory}"`}
+              >
+                ✏️ Rename
+              </button>
+              <button
+                onClick={handleDeleteCategoryClick}
+                className="px-3 py-1.5 border border-alert-red/20 text-alert-red hover:bg-alert-red/5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
+                title={`Delete category "${selectedCategory}"`}
+              >
+                🗑️ Delete Category
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -289,13 +377,8 @@ export default function InventoryPanel() {
                       <button
                         onClick={() => {
                           setEditingItem(item);
-                          if (DEFAULT_CATEGORIES.includes(item.category)) {
-                            setDropdownCategory(item.category);
-                            setCustomCategory("");
-                          } else {
-                            setDropdownCategory("custom");
-                            setCustomCategory(item.category);
-                          }
+                          setDropdownCategory(item.category || DEFAULT_CATEGORIES[0]);
+                          setCustomCategory("");
                           setIsItemModalOpen(true);
                         }}
                         className="p-2 border border-border/80 text-primary-navy hover:bg-antique-cream rounded-xl transition-all text-xs"
@@ -304,11 +387,7 @@ export default function InventoryPanel() {
                         ✏️
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${item.name}?`)) {
-                            deleteItemMutation.mutate(item._id!);
-                          }
-                        }}
+                        onClick={() => setItemToDelete(item)}
                         className="p-2 border border-alert-red/20 text-alert-red hover:bg-alert-red/5 rounded-xl transition-all text-xs"
                         title="Delete Item"
                       >
@@ -369,7 +448,7 @@ export default function InventoryPanel() {
                       }}
                       className="w-full bg-[#FAF9F5] border border-border/60 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-gold transition-all"
                     >
-                      {DEFAULT_CATEGORIES.map((cat) => (
+                      {allDropdownCategories.map((cat) => (
                         <option key={cat} value={cat}>
                           {cat}
                         </option>
@@ -467,6 +546,139 @@ export default function InventoryPanel() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Custom Rename Category Dialog */}
+        {categoryToRename && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => setCategoryToRename(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-border/40 shadow-xl space-y-6"
+            >
+              <div>
+                <h3 className="font-heading text-xl text-primary-navy font-black uppercase tracking-tight">Rename Category</h3>
+                <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em] mt-1">Update designation</p>
+              </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-muted uppercase tracking-widest block">New Name</label>
+                <input
+                  type="text"
+                  value={renameInputValue}
+                  onChange={(e) => setRenameInputValue(e.target.value)}
+                  className="w-full bg-[#FAF9F5] border border-border/60 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-gold transition-all"
+                  placeholder="e.g. Fresh Fruits"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmRenameCategory();
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCategoryToRename(null)}
+                  className="flex-1 py-3 px-4 border border-border/60 hover:bg-[#FAF9F5] rounded-xl text-xs font-semibold text-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmRenameCategory}
+                  className="flex-1 py-3 px-4 bg-primary-navy hover:bg-primary-navy/95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                >
+                  Rename
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Custom Delete Category Confirmation Dialog */}
+        {categoryToDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => setCategoryToDelete(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-border/40 shadow-xl space-y-6"
+            >
+              <div>
+                <h3 className="font-heading text-xl text-alert-red font-black uppercase tracking-tight">Delete Category</h3>
+                <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em] mt-1">Destructive Action</p>
+              </div>
+
+              <p className="text-xs font-medium text-muted/90 leading-relaxed">
+                Are you sure you want to delete the category <span className="font-bold text-primary-navy">"{categoryToDelete}"</span>?
+                <br />
+                <br />
+                This will <span className="font-bold text-alert-red">delete all inventory items</span> belonging to this category, remove their transaction logs, and clear them from recipes.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCategoryToDelete(null)}
+                  className="flex-1 py-3 px-4 border border-border/60 hover:bg-[#FAF9F5] rounded-xl text-xs font-semibold text-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteCategory}
+                  className="flex-1 py-3 px-4 bg-alert-red hover:bg-alert-red/95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                >
+                  Delete All
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Custom Delete Item Confirmation Dialog */}
+        {itemToDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-navy/40 backdrop-blur-md" onClick={() => setItemToDelete(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-border/40 shadow-xl space-y-6"
+            >
+              <div>
+                <h3 className="font-heading text-xl text-alert-red font-black uppercase tracking-tight">Delete Item</h3>
+                <p className="text-[10px] font-black text-accent-gold uppercase tracking-[0.2em] mt-1">Confirm deletion</p>
+              </div>
+
+              <p className="text-xs font-medium text-muted/90 leading-relaxed">
+                Are you sure you want to delete the item <span className="font-bold text-primary-navy">"{itemToDelete.name}"</span>?
+                <br />
+                This action is irreversible.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setItemToDelete(null)}
+                  className="flex-1 py-3 px-4 border border-border/60 hover:bg-[#FAF9F5] rounded-xl text-xs font-semibold text-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteItem}
+                  className="flex-1 py-3 px-4 bg-alert-red hover:bg-alert-red/95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                >
+                  Delete
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

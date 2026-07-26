@@ -14,27 +14,9 @@ export interface MenuItem {
   updatedAt?: Date;
 }
 
-export type MenuCategory =
-  | "Tea"
-  | "Coffee"
-  | "Ice Tea"
-  | "Mocktails"
-  | "Shakes"
-  | "Breads"
-  | "Burger"
-  | "Pav & Fries"
-  | "Sandwich"
-  | "Pasta"
-  | "Pizza"
-  | "Cafe Special"
-  | "Momo"
-  | "Maggi"
-  | "Rolls"
-  | "Dessert"
-  | "Pastry"
-  | "Beverage";
+export type MenuCategory = string;
 
-export const MENU_CATEGORIES: MenuCategory[] = [
+export const MENU_CATEGORIES: string[] = [
   "Tea",
   "Coffee",
   "Ice Tea",
@@ -53,4 +35,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
   "Dessert",
   "Pastry",
   "Beverage",
+  "Frappes",
+  "Hot Chocolate",
+  "OTC",
 ];
